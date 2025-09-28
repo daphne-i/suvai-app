@@ -55,5 +55,39 @@ class RecipeRepository {
     return recipes;
   }
 
-// We will add insert, update, and delete methods here in later steps.
+  Future<void> insertRecipe(Recipe recipe) async {
+    final db = await _dbService.database;
+
+    // Use a transaction to ensure both operations succeed or fail together.
+    await db.transaction((txn) async {
+      // 1. Insert the recipe into the 'recipes' table.
+      final recipeId = await txn.insert(
+        'recipes',
+        {
+          'name': recipe.name,
+          'imagePath': recipe.imagePath,
+          'servings': recipe.servings,
+          'cookTimeMinutes': recipe.cookTimeMinutes,
+          'instructions': jsonEncode(recipe.instructions),
+          'tags': jsonEncode(recipe.tags),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      // 2. Insert each ingredient into the 'ingredients' table.
+      for (final ingredient in recipe.ingredients) {
+        await txn.insert(
+          'ingredients',
+          {
+            'recipeId': recipeId,
+            'name': ingredient.name,
+            'quantity': ingredient.quantity,
+            'unit': ingredient.unit,
+            'preparation': ingredient.preparation,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
+  }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
 import '../cubit/recipe_list_cubit.dart';
@@ -95,7 +96,7 @@ class RecipeListScreen extends StatelessWidget {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-            // TODO: Navigate to Add Recipe Screen
+            GoRouter.of(context).go('/add-recipe');
           },
           child: const Icon(Icons.add, size: 32),
         ),
