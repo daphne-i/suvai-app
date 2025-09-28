@@ -12,53 +12,86 @@ class RecipeListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => RecipeListCubit(
-        // Assuming RecipeRepository is provided higher up the tree in main.dart
         RepositoryProvider.of<RecipeRepository>(context),
       )..loadRecipes(),
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('My Recipes (சுவை)'),
-          // The search bar will be added when we implement the search user story [cite: 40]
-        ),
-        body: BlocBuilder<RecipeListCubit, RecipeListState>(
-          builder: (context, state) {
-            if (state.status == RecipeListStatus.loading) {
-              return const Center(child: CircularProgressIndicator());
-            }
+        // We remove the AppBar to have more control over the layout
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 16),
+                // Main Title
+                Text(
+                  'My Recipes (சுவை)',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
 
-            if (state.status == RecipeListStatus.failure) {
-              return Center(child: Text('Failed to load recipes: ${state.errorMessage}'));
-            }
+                // --- NEW SEARCH BAR WIDGET ---
+                TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search recipes...',
+                    prefixIcon: const Icon(Icons.search),
+                    filled: true,
+                    fillColor: Colors.grey[850],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onChanged: (value) {
+                    // Connects the search bar to our cubit
+                    context.read<RecipeListCubit>().searchQueryChanged(value);
+                  },
+                ),
+                const SizedBox(height: 16),
 
-            if (state.status == RecipeListStatus.success && state.recipes.isEmpty) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text(
-                    'Your recipe book is empty. Tap the + button to add your first recipe!',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 18, color: Colors.white70),
+                // --- GRID VIEW ---
+                Expanded(
+                  child: BlocBuilder<RecipeListCubit, RecipeListState>(
+                    builder: (context, state) {
+                      if (state.status == RecipeListStatus.loading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      if (state.status == RecipeListStatus.failure) {
+                        return Center(child: Text('Failed to load recipes: ${state.errorMessage}'));
+                      }
+
+                      // Check the filtered list now
+                      if (state.filteredRecipes.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'No recipes found.',
+                            style: TextStyle(fontSize: 18, color: Colors.white70),
+                          ),
+                        );
+                      }
+
+                      return GridView.builder(
+                        padding: const EdgeInsets.only(bottom: 80.0), // Space for FAB
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12.0,
+                          mainAxisSpacing: 12.0,
+                          childAspectRatio: 0.8,
+                        ),
+                        // Use the filtered list for the UI
+                        itemCount: state.filteredRecipes.length,
+                        itemBuilder: (context, index) {
+                          final recipe = state.filteredRecipes[index];
+                          return _RecipeCard(recipe: recipe);
+                        },
+                      );
+                    },
                   ),
                 ),
-              );
-            }
-
-            // --- UI CHANGE FROM LISTVIEW TO GRIDVIEW ---
-            return GridView.builder(
-              padding: const EdgeInsets.all(12.0),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,          // 2 columns
-                crossAxisSpacing: 12.0,     // Horizontal spacing
-                mainAxisSpacing: 12.0,      // Vertical spacing
-                childAspectRatio: 0.8,      // Aspect ratio of each card
-              ),
-              itemCount: state.recipes.length,
-              itemBuilder: (context, index) {
-                final recipe = state.recipes[index];
-                return _RecipeCard(recipe: recipe);
-              },
-            );
-          },
+              ],
+            ),
+          ),
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
@@ -71,7 +104,7 @@ class RecipeListScreen extends StatelessWidget {
   }
 }
 
-// --- NEW WIDGET FOR THE RECIPE CARD ---
+// The _RecipeCard widget remains unchanged from the previous step
 class _RecipeCard extends StatelessWidget {
   const _RecipeCard({required this.recipe});
 
@@ -80,7 +113,7 @@ class _RecipeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      clipBehavior: Clip.antiAlias, // Ensures the content respects the card's rounded corners
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -88,8 +121,6 @@ class _RecipeCard extends StatelessWidget {
           Expanded(
             child: Container(
               color: Colors.grey[800],
-              // Later, we'll replace this with an Image widget once we can add photos.
-              // For now, a placeholder indicates where the image will go.
               child: const Center(
                 child: Icon(Icons.photo_camera, color: Colors.white38, size: 50),
               ),
