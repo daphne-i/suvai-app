@@ -39,4 +39,14 @@ class RecipeListCubit extends Cubit<RecipeListState> {
       emit(state.copyWith(filteredRecipes: filtered));
     }
   }
+  Future<void> deleteRecipe(int id) async {
+    try {
+      await _recipeRepository.deleteRecipe(id);
+      // After deleting, reload the list to reflect the change
+      loadRecipes();
+    } catch (e) {
+      // Handle potential errors
+      emit(state.copyWith(status: RecipeListStatus.failure, errorMessage: e.toString()));
+    }
+  }
 }

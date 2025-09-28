@@ -15,16 +15,18 @@ class RecipeFormCubit extends Cubit<Recipe> {
       const Recipe(
         name: '',
         servings: 1,
+        prepTimeMinutes: 15,
         cookTimeMinutes: 30,
-        ingredients: [Ingredient(quantity: 0, unit: 'g', name: '')], // Start with one empty ingredient
-        instructions: [''], // Start with one empty instruction
+        ingredients: [Ingredient(quantity: 0, unit: 'g', name: '')],
+        instructions: [''],
         tags: [],
       ));
 
-  void updateField({String? name, int? servings, int? cookTimeMinutes}) {
+  void updateField({String? name, int? servings, int? prepTimeMinutes, int? cookTimeMinutes}) {
     emit(state.copyWith(
       name: name,
       servings: servings,
+      prepTimeMinutes: prepTimeMinutes,
       cookTimeMinutes: cookTimeMinutes,
     ));
   }
@@ -73,18 +75,21 @@ class RecipeFormCubit extends Cubit<Recipe> {
 
   // --- TAGS METHOD ---
   void tagsChanged(String tagsString) {
-    // Split the string by comma, trim whitespace, and remove any empty tags
     final tags = tagsString.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
     emit(state.copyWith(tags: tags));
   }
 
   Future<void> saveRecipe() async {
-    // Filter out empty ingredients/instructions before saving
     final cleanRecipe = state.copyWith(
       ingredients: state.ingredients.where((i) => i.name.trim().isNotEmpty).toList(),
       instructions: state.instructions.where((i) => i.trim().isNotEmpty).toList(),
     );
-    await _recipeRepository.insertRecipe(cleanRecipe);
+
+    if (cleanRecipe.id != null) {
+      await _recipeRepository.updateRecipe(cleanRecipe);
+    } else {
+      await _recipeRepository.insertRecipe(cleanRecipe);
+    }
   }
 }
 
@@ -117,7 +122,7 @@ class AddEditRecipeScreen extends StatelessWidget {
   }
 }
 
-// --- REFACTORED FORM WIDGET ---
+// --- FORM WIDGET ---
 class _RecipeForm extends StatelessWidget {
   const _RecipeForm();
 
@@ -125,12 +130,13 @@ class _RecipeForm extends StatelessWidget {
   Widget build(BuildContext context) {
     final cubit = context.watch<RecipeFormCubit>();
     final recipe = cubit.state;
+    final formKey = Key('recipe_form_${recipe.id ?? 'new'}');
 
     return Form(
+      key: formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // --- PHOTO SECTION (UI ONLY FOR NOW) ---
           const SizedBox(height: 16),
           Container(
             height: 150,
@@ -150,13 +156,11 @@ class _RecipeForm extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-
-          // --- INFO CHIPS SECTION ---
           Row(
             children: [
-              // --- ADD EXPANDED AROUND THIS WIDGET ---
               Expanded(
                 child: _InfoChipInput(
+                  key: Key('servings_${recipe.id}'),
                   label: 'Servings',
                   initialValue: recipe.servings.toString(),
                   onChanged: (v) => cubit.updateField(servings: int.tryParse(v) ?? 1),
@@ -166,14 +170,16 @@ class _RecipeForm extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _InfoChipInput(
+                  key: Key('prep_time_${recipe.id}'),
                   label: 'Prep Time (mins)',
-                  initialValue: '',
-                  onChanged: (v) {}, // TODO: Add to model
+                  initialValue: recipe.prepTimeMinutes.toString(), // <-- FIX THIS
+                  onChanged: (v) => cubit.updateField(prepTimeMinutes: int.tryParse(v) ?? 0), // <-- FIX THIS
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _InfoChipInput(
+                  key: Key('cook_time_${recipe.id}'),
                   label: 'Cook Time (mins)',
                   initialValue: recipe.cookTimeMinutes.toString(),
                   onChanged: (v) => cubit.updateField(cookTimeMinutes: int.tryParse(v) ?? 0),
@@ -182,27 +188,23 @@ class _RecipeForm extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-
-          // --- RECIPE NAME ---
           _StyledTextField(
+            key: Key('name_${recipe.id}'),
             hintText: 'Recipe Name',
             initialValue: recipe.name,
             onChanged: (value) => cubit.updateField(name: value),
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-
-          // --- TAGS FIELD ---
           const SizedBox(height: 16),
           _StyledTextField(
+            key: Key('tags_${recipe.id}'),
             hintText: 'Tags (e.g., Breakfast, Spicy, Vegetarian)',
             initialValue: recipe.tags.join(', '),
             onChanged: (value) => cubit.tagsChanged(value),
           ),
           const SizedBox(height: 24),
-
-          // --- INGREDIENTS ---
           _buildSectionTitle(context, 'Ingredients'),
-          ..._buildIngredientsInputs(context, recipe.ingredients, cubit),
+          ..._buildIngredientsInputs(context, recipe.ingredients, cubit, recipe.id),
           const SizedBox(height: 8),
           TextButton.icon(
             icon: const Icon(Icons.add),
@@ -210,10 +212,8 @@ class _RecipeForm extends StatelessWidget {
             onPressed: () => cubit.addIngredient(),
           ),
           const SizedBox(height: 24),
-
-          // --- INSTRUCTIONS ---
           _buildSectionTitle(context, 'Instructions'),
-          ..._buildInstructionsInputs(context, recipe.instructions, cubit),
+          ..._buildInstructionsInputs(context, recipe.instructions, cubit, recipe.id),
           const SizedBox(height: 8),
           TextButton.icon(
             icon: const Icon(Icons.add),
@@ -221,8 +221,6 @@ class _RecipeForm extends StatelessWidget {
             onPressed: () => cubit.addInstruction(),
           ),
           const SizedBox(height: 32),
-
-          // --- SAVE BUTTON ---
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
@@ -259,7 +257,6 @@ class _RecipeForm extends StatelessWidget {
     );
   }
 
-  // --- HELPER METHODS FOR BUILDING UI SECTIONS ---
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -267,13 +264,12 @@ class _RecipeForm extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildIngredientsInputs(BuildContext context, List<Ingredient> ingredients, RecipeFormCubit cubit) {
-    const unitOptions = [
-      'cup', 'g', 'inch', 'Kg', 'm', 'mL', 'no', 'packet', 'pcs', 'tbsp', 'tsp'
-    ];
+  List<Widget> _buildIngredientsInputs(BuildContext context, List<Ingredient> ingredients, RecipeFormCubit cubit, int? recipeId) {
     return List.generate(ingredients.length, (index) {
       final ingredient = ingredients[index];
+      final ingredientKey = Key('ingredient_${recipeId}_${ingredient.id ?? index}');
       return Card(
+        key: ingredientKey,
         margin: const EdgeInsets.only(bottom: 12),
         child: Padding(
           padding: const EdgeInsets.all(12.0),
@@ -317,7 +313,9 @@ class _RecipeForm extends StatelessWidget {
                     flex: 1,
                     child: DropdownButtonFormField<String>(
                       value: ingredient.unit,
-                      items: unitOptions.map((String unit) {
+                      items: const [
+                        'cup', 'g', 'inch', 'Kg', 'm', 'mL', 'no', 'packet', 'pcs', 'tbsp', 'tsp'
+                      ].map((String unit) {
                         return DropdownMenuItem<String>(
                           value: unit,
                           child: Text(unit),
@@ -353,9 +351,12 @@ class _RecipeForm extends StatelessWidget {
       );
     });
   }
-  List<Widget> _buildInstructionsInputs(BuildContext context, List<String> instructions, RecipeFormCubit cubit) {
+
+  List<Widget> _buildInstructionsInputs(BuildContext context, List<String> instructions, RecipeFormCubit cubit, int? recipeId) {
     return List.generate(instructions.length, (index) {
+      final instructionKey = Key('instruction_${recipeId}_$index');
       return Padding(
+        key: instructionKey,
         padding: const EdgeInsets.only(bottom: 8.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -390,6 +391,7 @@ class _StyledTextField extends StatelessWidget {
   final TextStyle? style;
 
   const _StyledTextField({
+    super.key,
     this.initialValue,
     this.hintText,
     this.labelText,
@@ -430,6 +432,7 @@ class _InfoChipInput extends StatelessWidget {
   final bool isPrimary;
 
   const _InfoChipInput({
+    super.key,
     required this.label,
     required this.initialValue,
     required this.onChanged,

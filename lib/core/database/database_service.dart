@@ -33,6 +33,7 @@ class DatabaseService {
         name TEXT NOT NULL,
         imagePath TEXT,
         servings INTEGER NOT NULL,
+        prepTimeMinutes INTEGER NOT NULL, 
         cookTimeMinutes INTEGER NOT NULL,
         instructions TEXT NOT NULL,
         tags TEXT NOT NULL

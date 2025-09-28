@@ -44,6 +44,7 @@ class RecipeRepository {
           name: recipeMap['name'],
           imagePath: recipeMap['imagePath'],
           servings: recipeMap['servings'],
+          prepTimeMinutes: recipeMap['prepTimeMinutes'],
           cookTimeMinutes: recipeMap['cookTimeMinutes'],
           // Decode the JSON strings back into lists
           instructions: List<String>.from(jsonDecode(recipeMap['instructions'])),
@@ -67,6 +68,7 @@ class RecipeRepository {
           'name': recipe.name,
           'imagePath': recipe.imagePath,
           'servings': recipe.servings,
+          'prepTimeMinutes': recipe.prepTimeMinutes,
           'cookTimeMinutes': recipe.cookTimeMinutes,
           'instructions': jsonEncode(recipe.instructions),
           'tags': jsonEncode(recipe.tags),
@@ -89,5 +91,57 @@ class RecipeRepository {
         );
       }
     });
+  }
+
+  Future<void> updateRecipe(Recipe recipe) async {
+    final db = await _dbService.database;
+    await db.transaction((txn) async {
+      // 1. Update the main recipe entry
+      await txn.update(
+        'recipes',
+        {
+          'name': recipe.name,
+          'imagePath': recipe.imagePath,
+          'servings': recipe.servings,
+          'prepTimeMinutes': recipe.prepTimeMinutes,
+          'cookTimeMinutes': recipe.cookTimeMinutes,
+          'instructions': jsonEncode(recipe.instructions),
+          'tags': jsonEncode(recipe.tags),
+        },
+        where: 'id = ?',
+        whereArgs: [recipe.id],
+      );
+
+      // 2. Delete all old ingredients associated with this recipe
+      await txn.delete('ingredients', where: 'recipeId = ?', whereArgs: [recipe.id]);
+
+      // 3. Insert the new list of ingredients
+      for (final ingredient in recipe.ingredients) {
+        await txn.insert('ingredients', {
+          'recipeId': recipe.id,
+          'name': ingredient.name,
+          'quantity': ingredient.quantity,
+          'unit': ingredient.unit,
+          'preparation': ingredient.preparation,
+        });
+      }
+    });
+  }
+
+  // --- ADD THIS NEW METHOD ---
+  Future<void> deleteRecipe(int id) async {
+    final db = await _dbService.database;
+    await db.delete(
+      'recipes',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    // Note: The ON DELETE CASCADE constraint in our schema will automatically delete associated ingredients.
+  }
+
+  // This method is needed for the Recipe Detail Screen, but we won't implement that screen in this step.
+  Future<Recipe?> getRecipeById(int id) async {
+    // We will implement this in the next step when building the detail screen.
+    return null;
   }
 }

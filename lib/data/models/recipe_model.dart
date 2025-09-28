@@ -4,8 +4,9 @@ import 'ingredient_model.dart';
 class Recipe extends Equatable {
   final int? id;
   final String name;
-  final String? imagePath; // Local file path
+  final String? imagePath;
   final int servings;
+  final int prepTimeMinutes;
   final int cookTimeMinutes;
   final List<Ingredient> ingredients;
   final List<String> instructions;
@@ -16,18 +17,19 @@ class Recipe extends Equatable {
     required this.name,
     this.imagePath,
     required this.servings,
+    required this.prepTimeMinutes,
     required this.cookTimeMinutes,
     required this.ingredients,
     required this.instructions,
     required this.tags,
   });
 
-  // --- ADD THIS ENTIRE METHOD ---
   Recipe copyWith({
     int? id,
     String? name,
     String? imagePath,
     int? servings,
+    int? prepTimeMinutes,
     int? cookTimeMinutes,
     List<Ingredient>? ingredients,
     List<String>? instructions,
@@ -38,6 +40,7 @@ class Recipe extends Equatable {
       name: name ?? this.name,
       imagePath: imagePath ?? this.imagePath,
       servings: servings ?? this.servings,
+      prepTimeMinutes: prepTimeMinutes ?? this.prepTimeMinutes,
       cookTimeMinutes: cookTimeMinutes ?? this.cookTimeMinutes,
       ingredients: ingredients ?? this.ingredients,
       instructions: instructions ?? this.instructions,
@@ -51,6 +54,7 @@ class Recipe extends Equatable {
     name,
     imagePath,
     servings,
+    prepTimeMinutes,
     cookTimeMinutes,
     ingredients,
     instructions,

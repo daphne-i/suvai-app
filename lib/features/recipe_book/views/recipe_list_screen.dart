@@ -119,7 +119,13 @@ class _RecipeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return InkWell(onTap: () {
+      context.push('/edit-recipe',extra: recipe);
+    },
+        onLongPress: () {
+          _showDeleteConfirmation(context, recipe);
+        },
+    child:  Card(
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
@@ -145,6 +151,36 @@ class _RecipeCard extends StatelessWidget {
           ),
         ],
       ),
+    )
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, Recipe recipe) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete Recipe?'),
+          content: Text('Are you sure you want to delete "${recipe.name}"? This cannot be undone.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(); // Close the dialog
+              },
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+              child: const Text('Delete'),
+              onPressed: () {
+                // Access the cubit from the original context
+                context.read<RecipeListCubit>().deleteRecipe(recipe.id!);
+                Navigator.of(dialogContext).pop(); // Close the dialog
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }
