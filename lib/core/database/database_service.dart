@@ -51,5 +51,15 @@ class DatabaseService {
         FOREIGN KEY (recipeId) REFERENCES recipes (id) ON DELETE CASCADE
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE meal_plan(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        mealType TEXT NOT NULL,
+        recipeId INTEGER NOT NULL,
+        FOREIGN KEY (recipeId) REFERENCES recipes (id) ON DELETE CASCADE
+      )
+      ''');
   }
 }
