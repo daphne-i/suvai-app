@@ -16,7 +16,7 @@ class RecipeFormCubit extends Cubit<Recipe> {
         name: '',
         servings: 1,
         cookTimeMinutes: 30,
-        ingredients: [Ingredient(quantity: 0, unit: '', name: '')], // Start with one empty ingredient
+        ingredients: [Ingredient(quantity: 0, unit: 'g', name: '')], // Start with one empty ingredient
         instructions: [''], // Start with one empty instruction
         tags: [],
       ));
@@ -32,7 +32,7 @@ class RecipeFormCubit extends Cubit<Recipe> {
   // --- INGREDIENT METHODS ---
   void addIngredient() {
     final newIngredients = List<Ingredient>.from(state.ingredients)
-      ..add(const Ingredient(quantity: 0, unit: '', name: ''));
+      ..add(const Ingredient(quantity: 0, unit: 'g', name: ''));
     emit(state.copyWith(ingredients: newIngredients));
   }
 
@@ -268,6 +268,9 @@ class _RecipeForm extends StatelessWidget {
   }
 
   List<Widget> _buildIngredientsInputs(BuildContext context, List<Ingredient> ingredients, RecipeFormCubit cubit) {
+    const unitOptions = [
+      'cup', 'g', 'inch', 'Kg', 'm', 'mL', 'no', 'packet', 'pcs', 'tbsp', 'tsp'
+    ];
     return List.generate(ingredients.length, (index) {
       final ingredient = ingredients[index];
       return Card(
@@ -312,10 +315,28 @@ class _RecipeForm extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     flex: 1,
-                    child: _StyledTextField(
-                      hintText: 'Unit',
-                      initialValue: ingredient.unit,
-                      onChanged: (v) => cubit.updateIngredient(index, unit: v),
+                    child: DropdownButtonFormField<String>(
+                      value: ingredient.unit,
+                      items: unitOptions.map((String unit) {
+                        return DropdownMenuItem<String>(
+                          value: unit,
+                          child: Text(unit),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          cubit.updateIngredient(index, unit: newValue);
+                        }
+                      },
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: Colors.grey.withOpacity(0.1),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
                     ),
                   ),
                   IconButton(
@@ -332,7 +353,6 @@ class _RecipeForm extends StatelessWidget {
       );
     });
   }
-
   List<Widget> _buildInstructionsInputs(BuildContext context, List<String> instructions, RecipeFormCubit cubit) {
     return List.generate(instructions.length, (index) {
       return Padding(
