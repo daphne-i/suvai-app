@@ -119,8 +119,9 @@ class _RecipeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(onTap: () {
-      context.push('/edit-recipe',extra: recipe);
+    return InkWell(onTap: () async{
+      await context.push('/edit-recipe',extra: recipe);
+      context.read<RecipeListCubit>().loadRecipes();
     },
         onLongPress: () {
           _showDeleteConfirmation(context, recipe);
