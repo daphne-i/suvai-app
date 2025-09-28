@@ -3,27 +3,25 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
-import '../cubit/recipe_list_cubit.dart';
-import '../cubit/recipe_list_state.dart';
+import 'package:suvai/features/recipe_book/cubit/recipe_list_cubit.dart';
+import 'package:suvai/features/recipe_book/cubit/recipe_list_state.dart';
 
 class RecipeListScreen extends StatelessWidget {
   const RecipeListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // RecipeListScreen is now ONLY responsible for CREATING the provider.
+    // This widget is responsible for CREATING and PROVIDING the Cubit.
     return BlocProvider(
       create: (context) => RecipeListCubit(
         RepositoryProvider.of<RecipeRepository>(context),
       )..loadRecipes(),
-      // Its child is the new widget that will build the UI.
+      // Its child is the widget that will build the UI.
       child: const _RecipeListView(),
     );
   }
 }
 
-
-// --- NEW PRIVATE WIDGET FOR THE UI ---
 // This widget's BuildContext is a DESCENDANT of the BlocProvider,
 // so it can successfully find and use the RecipeListCubit.
 class _RecipeListView extends StatelessWidget {
@@ -31,6 +29,9 @@ class _RecipeListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Use BlocSelector to rebuild only when the activeTagFilter changes
+    final activeTagFilter = context.select((RecipeListCubit cubit) => cubit.state.activeTagFilter);
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -59,6 +60,17 @@ class _RecipeListView extends StatelessWidget {
                   context.read<RecipeListCubit>().searchQueryChanged(value);
                 },
               ),
+              if (activeTagFilter != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Chip(
+                    label: Text('Filtering by: "$activeTagFilter"'),
+                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                    onDeleted: () {
+                      context.read<RecipeListCubit>().clearTagFilter();
+                    },
+                  ),
+                ),
               const SizedBox(height: 16),
               Expanded(
                 child: BlocBuilder<RecipeListCubit, RecipeListState>(
@@ -78,7 +90,7 @@ class _RecipeListView extends StatelessWidget {
                       );
                     }
                     return GridView.builder(
-                      padding: const EdgeInsets.only(bottom: 80.0),
+                      padding: const EdgeInsets.only(bottom: 80.0), // Space for FAB
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         crossAxisSpacing: 12.0,
@@ -100,8 +112,6 @@ class _RecipeListView extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          // This context now correctly belongs to _RecipeListView
-          // and can find the provider.
           await context.push('/add-recipe');
           context.read<RecipeListCubit>().loadRecipes();
         },
@@ -111,77 +121,97 @@ class _RecipeListView extends StatelessWidget {
   }
 }
 
-// _RecipeCard widget remains the same
 class _RecipeCard extends StatelessWidget {
   const _RecipeCard({required this.recipe});
-
   final Recipe recipe;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(onTap: () async{
-      await context.push('/edit-recipe',extra: recipe);
-      context.read<RecipeListCubit>().loadRecipes();
-    },
-        onLongPress: () {
-          _showDeleteConfirmation(context, recipe);
-        },
-    child:  Card(
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Container(
-              color: Colors.grey[800],
-              child: const Center(
-                child: Icon(Icons.photo_camera, color: Colors.white38, size: 50),
+    return InkWell(
+      onTap: () async {
+        await context.push('/edit-recipe', extra: recipe);
+        context.read<RecipeListCubit>().loadRecipes();
+      },
+      onLongPress: () {
+        _showDeleteConfirmation(context, recipe);
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Container(
+                color: Colors.grey[800],
+                child: const Center(
+                  child: Icon(Icons.photo_camera, color: Colors.white38, size: 50),
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              recipe.name,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                recipe.name,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
+            if (recipe.tags.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                child: Wrap(
+                  spacing: 4.0,
+                  runSpacing: 4.0,
+                  alignment: WrapAlignment.center,
+                  children: recipe.tags.map((tag) {
+                    return GestureDetector(
+                      onTap: () {
+                        context.read<RecipeListCubit>().filterByTag(tag);
+                      },
+                      child: Chip(
+                        label: Text(tag, style: const TextStyle(fontSize: 10)),
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+void _showDeleteConfirmation(BuildContext context, Recipe recipe) {
+  showDialog(
+    context: context,
+    builder: (BuildContext dialogContext) {
+      return AlertDialog(
+        title: const Text('Delete Recipe?'),
+        content: Text('Are you sure you want to delete "${recipe.name}"? This cannot be undone.'),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+            },
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            child: const Text('Delete'),
+            onPressed: () {
+              context.read<RecipeListCubit>().deleteRecipe(recipe.id!);
+              Navigator.of(dialogContext).pop();
+            },
           ),
         ],
-      ),
-    )
-    );
-  }
-
-  void _showDeleteConfirmation(BuildContext context, Recipe recipe) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Delete Recipe?'),
-          content: Text('Are you sure you want to delete "${recipe.name}"? This cannot be undone.'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop(); // Close the dialog
-              },
-            ),
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-              child: const Text('Delete'),
-              onPressed: () {
-                // Access the cubit from the original context
-                context.read<RecipeListCubit>().deleteRecipe(recipe.id!);
-                Navigator.of(dialogContext).pop(); // Close the dialog
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
+      );
+    },
+  );
 }

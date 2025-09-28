@@ -1,9 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
 import 'recipe_list_state.dart';
 
 class RecipeListCubit extends Cubit<RecipeListState> {
   final RecipeRepository _recipeRepository;
+  String _currentSearchQuery = '';
 
   RecipeListCubit(this._recipeRepository) : super(const RecipeListState());
 
@@ -22,23 +24,45 @@ class RecipeListCubit extends Cubit<RecipeListState> {
     }
   }
 
-  // --- ADD THIS NEW METHOD ---
+  void filterByTag(String tag) {
+    emit(state.copyWith(activeTagFilter: tag));
+    _applyFilters(); // Apply all filters together
+  }
+
+  void clearTagFilter() {
+    emit(state.copyWith(clearTagFilter: true));
+    _applyFilters();
+  }
+
   void searchQueryChanged(String query) {
-    if (query.isEmpty) {
-      // If the query is empty, show all recipes
-      emit(state.copyWith(filteredRecipes: state.recipes));
-    } else {
-      // Otherwise, filter the master list of recipes
-      final filtered = state.recipes.where((recipe) {
-        final queryLower = query.toLowerCase();
+    _currentSearchQuery = query;
+    _applyFilters();
+  }
+
+  // --- NEW PRIVATE HELPER METHOD ---
+  void _applyFilters() {
+    List<Recipe> filtered = List.from(state.recipes);
+
+    // 1. Apply tag filter first
+    if (state.activeTagFilter != null) {
+      filtered = filtered.where((recipe) {
+        return recipe.tags.any((tag) => tag.toLowerCase() == state.activeTagFilter!.toLowerCase());
+      }).toList();
+    }
+
+    // 2. Apply search query on the result of the tag filter
+    if (_currentSearchQuery.isNotEmpty) {
+      filtered = filtered.where((recipe) {
+        final queryLower = _currentSearchQuery.toLowerCase();
         final nameMatch = recipe.name.toLowerCase().contains(queryLower);
-        // We can also search by tags as per the user story [cite: 36, 41]
         final tagMatch = recipe.tags.any((tag) => tag.toLowerCase().contains(queryLower));
         return nameMatch || tagMatch;
       }).toList();
-      emit(state.copyWith(filteredRecipes: filtered));
     }
+
+    emit(state.copyWith(filteredRecipes: filtered));
   }
+
   Future<void> deleteRecipe(int id) async {
     try {
       await _recipeRepository.deleteRecipe(id);
