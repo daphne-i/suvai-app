@@ -11,101 +11,107 @@ class RecipeListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // RecipeListScreen is now ONLY responsible for CREATING the provider.
     return BlocProvider(
       create: (context) => RecipeListCubit(
         RepositoryProvider.of<RecipeRepository>(context),
       )..loadRecipes(),
-      child: Scaffold(
-        // We remove the AppBar to have more control over the layout
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-                // Main Title
-                Text(
-                  'My Recipes (சுவை)',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
+      // Its child is the new widget that will build the UI.
+      child: const _RecipeListView(),
+    );
+  }
+}
 
-                // --- NEW SEARCH BAR WIDGET ---
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search recipes...',
-                    prefixIcon: const Icon(Icons.search),
-                    filled: true,
-                    fillColor: Colors.grey[850],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
+
+// --- NEW PRIVATE WIDGET FOR THE UI ---
+// This widget's BuildContext is a DESCENDANT of the BlocProvider,
+// so it can successfully find and use the RecipeListCubit.
+class _RecipeListView extends StatelessWidget {
+  const _RecipeListView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              Text(
+                'My Recipes (சுவை)',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search recipes...',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.grey[850],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
                   ),
-                  onChanged: (value) {
-                    // Connects the search bar to our cubit
-                    context.read<RecipeListCubit>().searchQueryChanged(value);
+                ),
+                onChanged: (value) {
+                  context.read<RecipeListCubit>().searchQueryChanged(value);
+                },
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: BlocBuilder<RecipeListCubit, RecipeListState>(
+                  builder: (context, state) {
+                    if (state.status == RecipeListStatus.loading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (state.status == RecipeListStatus.failure) {
+                      return Center(child: Text('Failed to load recipes: ${state.errorMessage}'));
+                    }
+                    if (state.filteredRecipes.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'No recipes found.',
+                          style: TextStyle(fontSize: 18, color: Colors.white70),
+                        ),
+                      );
+                    }
+                    return GridView.builder(
+                      padding: const EdgeInsets.only(bottom: 80.0),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12.0,
+                        mainAxisSpacing: 12.0,
+                        childAspectRatio: 0.8,
+                      ),
+                      itemCount: state.filteredRecipes.length,
+                      itemBuilder: (context, index) {
+                        final recipe = state.filteredRecipes[index];
+                        return _RecipeCard(recipe: recipe);
+                      },
+                    );
                   },
                 ),
-                const SizedBox(height: 16),
-
-                // --- GRID VIEW ---
-                Expanded(
-                  child: BlocBuilder<RecipeListCubit, RecipeListState>(
-                    builder: (context, state) {
-                      if (state.status == RecipeListStatus.loading) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      if (state.status == RecipeListStatus.failure) {
-                        return Center(child: Text('Failed to load recipes: ${state.errorMessage}'));
-                      }
-
-                      // Check the filtered list now
-                      if (state.filteredRecipes.isEmpty) {
-                        return const Center(
-                          child: Text(
-                            'No recipes found.',
-                            style: TextStyle(fontSize: 18, color: Colors.white70),
-                          ),
-                        );
-                      }
-
-                      return GridView.builder(
-                        padding: const EdgeInsets.only(bottom: 80.0), // Space for FAB
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12.0,
-                          mainAxisSpacing: 12.0,
-                          childAspectRatio: 0.8,
-                        ),
-                        // Use the filtered list for the UI
-                        itemCount: state.filteredRecipes.length,
-                        itemBuilder: (context, index) {
-                          final recipe = state.filteredRecipes[index];
-                          return _RecipeCard(recipe: recipe);
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            GoRouter.of(context).go('/add-recipe');
-          },
-          child: const Icon(Icons.add, size: 32),
-        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          // This context now correctly belongs to _RecipeListView
+          // and can find the provider.
+          await context.push('/add-recipe');
+          context.read<RecipeListCubit>().loadRecipes();
+        },
+        child: const Icon(Icons.add, size: 32),
       ),
     );
   }
 }
 
-// The _RecipeCard widget remains unchanged from the previous step
+// _RecipeCard widget remains the same
 class _RecipeCard extends StatelessWidget {
   const _RecipeCard({required this.recipe});
 
