@@ -1,7 +1,12 @@
 import 'package:equatable/equatable.dart';
 
-// Defines the meal slots for each day [cite: 49]
-enum MealType { breakfast, lunch, dinner }
+enum MealType {
+  breakfast,
+  morningSnack, // <-- ADD THIS
+  lunch,
+  eveningSnack, // <-- ADD THIS
+  dinner
+}
 
 class MealPlanEntry extends Equatable {
   final int? id;

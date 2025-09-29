@@ -5,6 +5,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // Required for FFI initia
 import 'package:suvai/data/repositories/recipe_repository.dart';
 import 'package:suvai/features/recipe_book/views/recipe_list_screen.dart';
 import 'package:suvai/core/router/app_router.dart';
+import 'package:suvai/data/repositories/meal_plan_repository.dart';
+
 
 Future<void> main() async { // main function now needs to be async
   // This is needed to ensure that plugins are initialized before runApp()
@@ -26,13 +28,20 @@ class SuvaiApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RepositoryProvider(
-      create: (context) => RecipeRepository(),
+    return MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider(
+          create: (context) => RecipeRepository(),
+        ),
+        RepositoryProvider(
+          create: (context) => MealPlanRepository(), // <-- 3. Add the new repository
+        ),
+      ],
       child: MaterialApp.router(
         routerConfig: goRouter,
         title: 'Suvai',
         theme: ThemeData(
-          brightness: Brightness.dark,
+        brightness: Brightness.dark,
           primaryColor: Colors.orange,
           colorScheme: const ColorScheme.dark(
             primary: Colors.orange,
