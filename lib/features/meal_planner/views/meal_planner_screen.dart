@@ -8,6 +8,7 @@ import 'package:suvai/data/repositories/meal_plan_repository.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
 import 'package:suvai/features/meal_planner/cubit/meal_planner_cubit.dart';
 import 'package:suvai/features/meal_planner/cubit/meal_planner_state.dart';
+import 'package:go_router/go_router.dart';
 
 class MealPlannerScreen extends StatelessWidget {
   const MealPlannerScreen({super.key});
@@ -179,6 +180,43 @@ class _MealSlotRow extends StatelessWidget {
     }
   }
 
+  Future<void> _showMealOptionsDialog(BuildContext context, MealPlanEntry entry) async {
+    final cubit = context.read<MealPlannerCubit>();
+    final recipe = cubit.state.recipeMap[entry.recipeId];
+    if (recipe == null) return;
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(recipe.name),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.edit_note),
+                title: const Text('View/Edit Recipe'),
+                onTap: () {
+                  Navigator.of(dialogContext).pop(); // Close the dialog
+                  // Navigate to the familiar edit screen to view details
+                  context.push('/edit-recipe', extra: recipe);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                title: const Text('Remove from Plan'),
+                onTap: () {
+                  Navigator.of(dialogContext).pop(); // Close the dialog
+                  cubit.removeRecipeFromPlan(entry.id!);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cubit = context.watch<MealPlannerCubit>();
@@ -202,7 +240,7 @@ class _MealSlotRow extends StatelessWidget {
         if (entry == null) {
           _showSelectRecipeDialog(context, date, mealType);
         } else {
-          // TODO: Handle tapping on an existing entry
+          _showMealOptionsDialog(context, entry);
         }
       },
       borderRadius: BorderRadius.circular(8),

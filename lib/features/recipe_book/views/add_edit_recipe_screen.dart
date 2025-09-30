@@ -267,7 +267,7 @@ class _RecipeForm extends StatelessWidget {
   List<Widget> _buildIngredientsInputs(BuildContext context, List<Ingredient> ingredients, RecipeFormCubit cubit, int? recipeId) {
     return List.generate(ingredients.length, (index) {
       final ingredient = ingredients[index];
-      final ingredientKey = Key('ingredient_${recipeId}_${ingredient.id ?? index}');
+      final ingredientKey = Key('ingredient_${recipeId}_${ingredient.id ?? 'new_$index'}');
       return Card(
         key: ingredientKey,
         margin: const EdgeInsets.only(bottom: 12),

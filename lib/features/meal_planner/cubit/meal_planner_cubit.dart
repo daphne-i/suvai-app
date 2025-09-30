@@ -48,4 +48,10 @@ class MealPlannerCubit extends Cubit<MealPlannerState> {
     // Reload the data for the current week to show the new entry
     loadMealPlanForWeek();
   }
+
+  Future<void> removeRecipeFromPlan(int mealPlanEntryId) async {
+    await _mealPlanRepository.removeMealPlanEntry(mealPlanEntryId);
+    // Reload the data for the current week to show the change
+    loadMealPlanForWeek();
+  }
 }

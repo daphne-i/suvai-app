@@ -6,7 +6,8 @@ import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
 import 'package:suvai/features/recipe_book/views/add_edit_recipe_screen.dart';
 import 'package:suvai/features/recipe_book/views/recipe_list_screen.dart';
-import 'package:suvai/features/meal_planner/views/meal_planner_screen.dart'; // <-- Import new screen
+import 'package:suvai/features/meal_planner/views/meal_planner_screen.dart';
+import 'package:suvai/features/recipe_book/views/shopping_list_screen.dart'; // <-- Import new screen
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -38,8 +39,17 @@ final goRouter = GoRouter(
             ),
           ],
         ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/shopping',
+              builder: (context, state) => const ShoppingListScreen(),
+            ),
+          ],
+        ),
       ],
     ),
+
     // These are top-level routes that will cover the navigation bar
     GoRoute(
       path: '/add-recipe',

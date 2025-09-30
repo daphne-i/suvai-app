@@ -38,4 +38,12 @@ class MealPlanRepository {
       },
     );
   }
+  Future<void> removeMealPlanEntry(int id) async {
+    final db = await _dbService.database;
+    await db.delete(
+      'meal_plan',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
 }
