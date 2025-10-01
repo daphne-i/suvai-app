@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:suvai/data/models/shopping_list_item_model.dart';
 import 'package:suvai/data/repositories/shopping_list_repository.dart';
 import 'package:suvai/features/shopping_list/cubit/shopping_list_cubit.dart';
 import 'package:suvai/features/shopping_list/cubit/shopping_list_state.dart';
@@ -9,7 +10,6 @@ class ShoppingListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('--- CHECKPOINT 4: ShoppingListScreen build() called. ---');
     return BlocProvider(
       create: (context) => ShoppingListCubit(
         context.read<ShoppingListRepository>(),
@@ -29,7 +29,6 @@ class _ShoppingListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('--- CHECKPOINT 5: _ShoppingListView build() called. ---');
     return Column(
       children: [
         Padding(
@@ -38,7 +37,6 @@ class _ShoppingListView extends StatelessWidget {
             icon: const Icon(Icons.sync),
             label: const Text('Generate from Current Week\'s Plan'),
             onPressed: () {
-              print('--- UI: Generate button tapped! ---');
               context.read<ShoppingListCubit>().generateList();
             },
           ),
@@ -57,46 +55,107 @@ class _ShoppingListView extends StatelessWidget {
                   child: Text('No ingredients needed for this week\'s plan!'),
                 );
               }
-              if (state.status == ShoppingListStatus.initial || state.groupedItems.isEmpty) {
-                return const Center(child: Text('Generate a list to see your items.'));
+              if (state.status == ShoppingListStatus.initial) {
+                return const Center(
+                  child: Text('Generate a list to see your items.'),
+                );
               }
 
-              final categories = state.groupedItems.keys.toList()..sort();
+              // Split items into unchecked and checked for rendering
+              final uncheckedItems = <String, List<ShoppingListItem>>{};
+              final checkedItems = <String, List<ShoppingListItem>>{};
 
-              return ListView.builder(
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
-                  final category = categories[index];
-                  final items = state.groupedItems[category]!;
+              state.groupedItems.forEach((category, items) {
+                final unchecked = items.where((item) => !item.isChecked).toList();
+                if (unchecked.isNotEmpty) {
+                  uncheckedItems[category] = unchecked;
+                }
+                final checked = items.where((item) => item.isChecked).toList();
+                if (checked.isNotEmpty) {
+                  checkedItems[category] = checked;
+                }
+              });
 
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: Text(
-                          category,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
+              return ListView(
+                children: [
+                  // Render the list of items to buy
+                  _buildCategoryList(context, uncheckedItems),
+
+                  // Render the list of purchased items
+                  if (checkedItems.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      child: Text(
+                        'Purchased Items',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.grey),
                       ),
-                      ...items.map((item) {
-                        return CheckboxListTile(
-                          title: Text('${item.quantity} ${item.unit} ${item.name}'),
-                          value: item.isChecked,
-                          onChanged: (bool? value) {
-                            // TODO: Connect to cubit to toggle item
-                          },
-                        );
-                      }).toList(),
-                      const Divider(),
-                    ],
-                  );
-                },
+                    ),
+                    _buildCategoryList(context, checkedItems, isCheckedList: true),
+                  ]
+                ],
               );
             },
           ),
         ),
       ],
     );
+  }
+
+  // Helper method to render a list of items, grouped by category
+  Widget _buildCategoryList(BuildContext context, Map<String, List<ShoppingListItem>> groupedItems, {bool isCheckedList = false}) {
+    if (groupedItems.isEmpty && !isCheckedList) {
+      return const Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Center(child: Text("You've got everything!")),
+      );
+    }
+    if (groupedItems.isEmpty && isCheckedList) {
+      return const SizedBox.shrink();
+    }
+
+    final categories = groupedItems.keys.toList()..sort();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: categories.map((category) {
+        final items = groupedItems[category]!;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(category, style: Theme.of(context).textTheme.titleLarge),
+            ),
+            ...items.map((item) {
+              return CheckboxListTile(
+                controlAffinity: ListTileControlAffinity.leading,
+                title: Text(
+                  // Use a helper to format the quantity nicely
+                  '${_formatQuantity(item.quantity)} ${item.unit} ${item.name}',
+                  style: TextStyle(
+                    decoration: isCheckedList ? TextDecoration.lineThrough : TextDecoration.none,
+                    color: isCheckedList ? Colors.grey : null,
+                  ),
+                ),
+                value: item.isChecked,
+                onChanged: (bool? value) {
+                  // Connect to the cubit to toggle the item's status
+                  context.read<ShoppingListCubit>().toggleItemStatus(item);
+                },
+              );
+            }).toList(),
+            const Divider(),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+  // Helper to avoid showing .0 for whole numbers
+  String _formatQuantity(double quantity) {
+    if (quantity == quantity.toInt()) {
+      return quantity.toInt().toString();
+    }
+    return quantity.toString();
   }
 }

@@ -4,6 +4,7 @@ import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/data/models/shopping_list_item_model.dart';
 import 'package:suvai/data/repositories/meal_plan_repository.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ShoppingListRepository {
   final MealPlanRepository _mealPlanRepo;
@@ -12,49 +13,47 @@ class ShoppingListRepository {
   ShoppingListRepository(this._mealPlanRepo, this._recipeRepo);
 
   Future<List<ShoppingListItem>> generateList(DateTime startDate) async {
-    // 1. Fetch all meal plan entries for the week
-    final mealPlan = await _mealPlanRepo.getMealPlansForWeek(startDate);
+    // Get an instance of shared preferences
+    final prefs = await SharedPreferences.getInstance();
 
-    // Fetch ALL recipes and put them in a map for easy and efficient lookup
+    // (The logic to fetch meal plans and recipes is the same)
+    final mealPlan = await _mealPlanRepo.getMealPlansForWeek(startDate);
     final allRecipesList = await _recipeRepo.getAllRecipes();
     final allRecipesMap = {for (var recipe in allRecipesList) recipe.id!: recipe};
 
-    // 2. Consolidate ingredients by iterating through every planned meal
     final Map<String, ShoppingListItem> consolidatedItems = {};
-
-    // Loop through each meal entry, NOT unique recipes
     for (var planEntry in mealPlan) {
-      final recipe = allRecipesMap[planEntry.recipeId]; // Look up the recipe for this specific meal
-
+      final recipe = allRecipesMap[planEntry.recipeId];
       if (recipe != null) {
-        // Now process the ingredients for this instance of the recipe
         for (var ingredient in recipe.ingredients) {
           final key = '${ingredient.name.trim().toLowerCase()}_${ingredient.unit.trim().toLowerCase()}';
+          final isChecked = prefs.getBool(key) ?? false; // <-- 3. Load the saved status
 
           if (consolidatedItems.containsKey(key)) {
-            // If the item already exists in our list, add the new quantity to the total
             final existingItem = consolidatedItems[key]!;
             final newQuantity = existingItem.quantity + ingredient.quantity;
             consolidatedItems[key] = ShoppingListItem(
-                name: existingItem.name,
-                unit: existingItem.unit,
-                category: existingItem.category,
-                quantity: newQuantity);
+              name: existingItem.name,
+              unit: existingItem.unit,
+              category: existingItem.category,
+              quantity: newQuantity,
+              isChecked: isChecked, // <-- 4. Apply the loaded status
+            );
           } else {
-            // If it's a new item, add it to our list for the first time
             consolidatedItems[key] = ShoppingListItem(
-                name: ingredient.name.trim(),
-                unit: ingredient.unit.trim(),
-                category: _getCategoryForIngredient(ingredient.name),
-                quantity: ingredient.quantity);
+              name: ingredient.name.trim(),
+              unit: ingredient.unit.trim(),
+              category: _getCategoryForIngredient(ingredient.name),
+              quantity: ingredient.quantity,
+              isChecked: isChecked, // <-- 4. Apply the loaded status
+            );
           }
         }
       }
     }
-
-    // 3. Return the final list
     return consolidatedItems.values.toList();
   }
+}
 
   // 3. Simple categorization logic
   String _getCategoryForIngredient(String name) {
@@ -70,4 +69,3 @@ class ShoppingListRepository {
     }
     return 'Pantry';
   }
-}
