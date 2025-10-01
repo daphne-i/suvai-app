@@ -4,18 +4,21 @@ import 'package:go_router/go_router.dart';
 import 'package:suvai/core/router/scaffold_with_nav_bar.dart';
 import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
+import 'package:suvai/features/meal_planner/views/meal_planner_screen.dart';
 import 'package:suvai/features/recipe_book/views/add_edit_recipe_screen.dart';
 import 'package:suvai/features/recipe_book/views/recipe_list_screen.dart';
-import 'package:suvai/features/meal_planner/views/meal_planner_screen.dart';
-import 'package:suvai/features/recipe_book/views/shopping_list_screen.dart'; // <-- Import new screen
+import 'package:suvai/features/shopping_list/views/shopping_list_screen.dart';
 
+// 1. Add keys for the shell route and each branch
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final _shellNavigatorKeyRecipes = GlobalKey<NavigatorState>(debugLabel: 'RecipesShell');
+final _shellNavigatorKeyPlanner = GlobalKey<NavigatorState>(debugLabel: 'PlannerShell');
+final _shellNavigatorKeyShopping = GlobalKey<NavigatorState>(debugLabel: 'ShoppingShell');
 
 final goRouter = GoRouter(
   initialLocation: '/recipes',
   navigatorKey: _rootNavigatorKey,
   routes: [
-    // This ShellRoute builds the UI with the BottomNavigationBar
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
         return ScaffoldWithNavBar(navigationShell: navigationShell);
@@ -23,6 +26,7 @@ final goRouter = GoRouter(
       branches: [
         // Branch for the first tab (Recipes)
         StatefulShellBranch(
+          navigatorKey: _shellNavigatorKeyRecipes, // 2. Assign the key
           routes: [
             GoRoute(
               path: '/recipes',
@@ -32,6 +36,7 @@ final goRouter = GoRouter(
         ),
         // Branch for the second tab (Planner)
         StatefulShellBranch(
+          navigatorKey: _shellNavigatorKeyPlanner, // 2. Assign the key
           routes: [
             GoRoute(
               path: '/planner',
@@ -39,7 +44,9 @@ final goRouter = GoRouter(
             ),
           ],
         ),
+        // Branch for the third tab (Shopping)
         StatefulShellBranch(
+          navigatorKey: _shellNavigatorKeyShopping, // 2. Assign the key
           routes: [
             GoRoute(
               path: '/shopping',
@@ -49,8 +56,7 @@ final goRouter = GoRouter(
         ),
       ],
     ),
-
-    // These are top-level routes that will cover the navigation bar
+    // These routes will cover the bottom nav bar
     GoRoute(
       path: '/add-recipe',
       parentNavigatorKey: _rootNavigatorKey,

@@ -139,9 +139,40 @@ class RecipeRepository {
     // Note: The ON DELETE CASCADE constraint in our schema will automatically delete associated ingredients.
   }
 
-  // This method is needed for the Recipe Detail Screen, but we won't implement that screen in this step.
   Future<Recipe?> getRecipeById(int id) async {
-    // We will implement this in the next step when building the detail screen.
-    return null;
+    final db = await _dbService.database;
+
+    // 1. Fetch the recipe
+    final List<Map<String, dynamic>> recipeMaps = await db.query(
+      'recipes',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (recipeMaps.isEmpty) {
+      return null;
+    }
+
+    // 2. Fetch its ingredients
+    final List<Map<String, dynamic>> ingredientMaps = await db.query(
+      'ingredients',
+      where: 'recipeId = ?',
+      whereArgs: [id],
+    );
+    final ingredients = ingredientMaps.map((im) => Ingredient.fromMap(im)).toList();
+
+    // 3. Combine them into a Recipe object
+    final recipeMap = recipeMaps.first;
+    return Recipe(
+      id: recipeMap['id'],
+      name: recipeMap['name'],
+      imagePath: recipeMap['imagePath'],
+      servings: recipeMap['servings'],
+      prepTimeMinutes: recipeMap['prepTimeMinutes'],
+      cookTimeMinutes: recipeMap['cookTimeMinutes'],
+      instructions: (jsonDecode(recipeMap['instructions']) as List<dynamic>).cast<String>(),
+      tags: (jsonDecode(recipeMap['tags']) as List<dynamic>).cast<String>(),
+      ingredients: ingredients,
+    );
   }
 }

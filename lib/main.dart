@@ -1,47 +1,67 @@
-import 'dart:io'; // Required for Platform checks
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // Required for FFI initialization
-import 'package:suvai/data/repositories/recipe_repository.dart';
-import 'package:suvai/features/recipe_book/views/recipe_list_screen.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:suvai/core/router/app_router.dart';
 import 'package:suvai/data/repositories/meal_plan_repository.dart';
+import 'package:suvai/data/repositories/recipe_repository.dart';
+import 'package:suvai/data/repositories/shopping_list_repository.dart';
 
-
-Future<void> main() async { // main function now needs to be async
-  // This is needed to ensure that plugins are initialized before runApp()
+Future<void> main() async {
+  print('--- CHECKPOINT 1: main() function started. ---');
   WidgetsFlutterBinding.ensureInitialized();
 
-  // --- ADD THIS BLOCK ---
-  // Initialize FFI for sqflite on desktop platforms
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
-  // --- END OF BLOCK ---
 
-  runApp(const SuvaiApp());
+  // --- 1. CREATE ALL REPOSITORIES MANUALLY HERE ---
+  final recipeRepository = RecipeRepository();
+  final mealPlanRepository = MealPlanRepository();
+  final shoppingListRepository = ShoppingListRepository(
+    mealPlanRepository,
+    recipeRepository,
+  );
+
+  runApp(
+    // --- 2. PASS THE REPOSITORIES TO THE APP WIDGET ---
+    SuvaiApp(
+      recipeRepository: recipeRepository,
+      mealPlanRepository: mealPlanRepository,
+      shoppingListRepository: shoppingListRepository,
+    ),
+  );
 }
 
 class SuvaiApp extends StatelessWidget {
-  const SuvaiApp({super.key});
+  // --- 3. ADD CONSTRUCTOR AND PROPERTIES FOR THE REPOSITORIES ---
+  final RecipeRepository recipeRepository;
+  final MealPlanRepository mealPlanRepository;
+  final ShoppingListRepository shoppingListRepository;
+
+  const SuvaiApp({
+    super.key,
+    required this.recipeRepository,
+    required this.mealPlanRepository,
+    required this.shoppingListRepository,
+  });
 
   @override
   Widget build(BuildContext context) {
+    print('--- CHECKPOINT 2: SuvaiApp build() called. ---');
+    // --- 4. USE .value CONSTRUCTORS TO PROVIDE THE EXISTING INSTANCES ---
     return MultiRepositoryProvider(
       providers: [
-        RepositoryProvider(
-          create: (context) => RecipeRepository(),
-        ),
-        RepositoryProvider(
-          create: (context) => MealPlanRepository(), // <-- 3. Add the new repository
-        ),
+        RepositoryProvider.value(value: recipeRepository),
+        RepositoryProvider.value(value: mealPlanRepository),
+        RepositoryProvider.value(value: shoppingListRepository),
       ],
       child: MaterialApp.router(
         routerConfig: goRouter,
         title: 'Suvai',
         theme: ThemeData(
-        brightness: Brightness.dark,
+          brightness: Brightness.dark,
           primaryColor: Colors.orange,
           colorScheme: const ColorScheme.dark(
             primary: Colors.orange,

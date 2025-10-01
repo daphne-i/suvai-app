@@ -12,41 +12,47 @@ class ShoppingListRepository {
   ShoppingListRepository(this._mealPlanRepo, this._recipeRepo);
 
   Future<List<ShoppingListItem>> generateList(DateTime startDate) async {
-    // 1. Fetch data
+    // 1. Fetch all meal plan entries for the week
     final mealPlan = await _mealPlanRepo.getMealPlansForWeek(startDate);
-    final recipeIds = mealPlan.map((e) => e.recipeId).toSet();
 
-    List<Recipe> recipes = [];
-    for (var id in recipeIds) {
-      final recipe = await _recipeRepo.getRecipeById(id);
-      if (recipe != null) {
-        recipes.add(recipe);
-      }
-    }
+    // Fetch ALL recipes and put them in a map for easy and efficient lookup
+    final allRecipesList = await _recipeRepo.getAllRecipes();
+    final allRecipesMap = {for (var recipe in allRecipesList) recipe.id!: recipe};
 
-    // 2. Consolidate ingredients
+    // 2. Consolidate ingredients by iterating through every planned meal
     final Map<String, ShoppingListItem> consolidatedItems = {};
-    for (var recipe in recipes) {
-      for (var ingredient in recipe.ingredients) {
-        final key = '${ingredient.name.trim().toLowerCase()}_${ingredient.unit.trim().toLowerCase()}';
-        if (consolidatedItems.containsKey(key)) {
-          final existing = consolidatedItems[key]!;
-          consolidatedItems[key] = ShoppingListItem(
-            name: existing.name,
-            unit: existing.unit,
-            category: existing.category,
-            quantity: existing.quantity + ingredient.quantity,
-          );
-        } else {
-          consolidatedItems[key] = ShoppingListItem(
-            name: ingredient.name,
-            unit: ingredient.unit,
-            category: _getCategoryForIngredient(ingredient.name),
-            quantity: ingredient.quantity,
-          );
+
+    // Loop through each meal entry, NOT unique recipes
+    for (var planEntry in mealPlan) {
+      final recipe = allRecipesMap[planEntry.recipeId]; // Look up the recipe for this specific meal
+
+      if (recipe != null) {
+        // Now process the ingredients for this instance of the recipe
+        for (var ingredient in recipe.ingredients) {
+          final key = '${ingredient.name.trim().toLowerCase()}_${ingredient.unit.trim().toLowerCase()}';
+
+          if (consolidatedItems.containsKey(key)) {
+            // If the item already exists in our list, add the new quantity to the total
+            final existingItem = consolidatedItems[key]!;
+            final newQuantity = existingItem.quantity + ingredient.quantity;
+            consolidatedItems[key] = ShoppingListItem(
+                name: existingItem.name,
+                unit: existingItem.unit,
+                category: existingItem.category,
+                quantity: newQuantity);
+          } else {
+            // If it's a new item, add it to our list for the first time
+            consolidatedItems[key] = ShoppingListItem(
+                name: ingredient.name.trim(),
+                unit: ingredient.unit.trim(),
+                category: _getCategoryForIngredient(ingredient.name),
+                quantity: ingredient.quantity);
+          }
         }
       }
     }
+
+    // 3. Return the final list
     return consolidatedItems.values.toList();
   }
 

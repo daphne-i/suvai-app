@@ -17,6 +17,18 @@ class Ingredient extends Equatable {
     this.preparation,
   });
 
+  // --- ADD THIS FACTORY CONSTRUCTOR ---
+  factory Ingredient.fromMap(Map<String, dynamic> map) {
+    return Ingredient(
+      id: map['id'] as int?,
+      recipeId: map['recipeId'] as int?,
+      quantity: map['quantity'] as double,
+      unit: map['unit'] as String,
+      name: map['name'] as String,
+      preparation: map['preparation'] as String?,
+    );
+  }
+
   @override
   List<Object?> get props => [id, recipeId, quantity, unit, name, preparation];
 }
