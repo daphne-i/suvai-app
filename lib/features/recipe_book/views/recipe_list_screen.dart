@@ -129,7 +129,7 @@ class _RecipeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () async {
-        await context.push('/edit-recipe', extra: recipe);
+        await context.push('/recipe/${recipe.id}');
         context.read<RecipeListCubit>().loadRecipes();
       },
       onLongPress: () {

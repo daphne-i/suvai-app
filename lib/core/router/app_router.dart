@@ -6,6 +6,7 @@ import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
 import 'package:suvai/features/meal_planner/views/meal_planner_screen.dart';
 import 'package:suvai/features/recipe_book/views/add_edit_recipe_screen.dart';
+import 'package:suvai/features/recipe_book/views/recipe_detail_screen.dart';
 import 'package:suvai/features/recipe_book/views/recipe_list_screen.dart';
 import 'package:suvai/features/shopping_list/views/shopping_list_screen.dart';
 
@@ -65,6 +66,16 @@ final goRouter = GoRouter(
         recipe: null,
       ),
     ),
+    GoRoute(
+      path: '/recipe/:id',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final id = int.parse(state.pathParameters['id']!);
+        return RecipeDetailScreen(recipeId: id);
+      },
+    ),
+
+    // Edit route is now simpler
     GoRoute(
       path: '/edit-recipe',
       parentNavigatorKey: _rootNavigatorKey,
