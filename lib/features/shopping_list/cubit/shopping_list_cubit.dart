@@ -52,5 +52,49 @@ class ShoppingListCubit extends Cubit<ShoppingListState> {
     // Emit the new state to update the UI
     emit(state.copyWith(groupedItems: newGroupedItems));
   }
+
+  void addManualItem(String name) {
+    if (name.trim().isEmpty) return;
+
+    final newItem = ShoppingListItem(
+      name: name.trim(),
+      quantity: 1,
+      unit: 'item',
+      category: 'Manual Additions',
+      isChecked: false,
+    );
+
+    // Create a deep copy of the map to ensure immutability
+    final newGroupedItems = state.groupedItems.map(
+          (key, value) => MapEntry(key, List<ShoppingListItem>.from(value)),
+    );
+
+    // Add the new item to the 'Manual Additions' category
+    if (newGroupedItems.containsKey('Manual Additions')) {
+      newGroupedItems['Manual Additions']!.add(newItem);
+    } else {
+      newGroupedItems['Manual Additions'] = [newItem];
+    }
+
+    emit(state.copyWith(groupedItems: newGroupedItems));
+  }
+
+  // --- ADD THIS NEW METHOD ---
+  void clearList() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Iterate through all items in the current state and remove their saved checked status
+    for (var category in state.groupedItems.values) {
+      for (var item in category) {
+        final itemKey = '${item.name.trim().toLowerCase()}_${item.unit.trim().toLowerCase()}';
+        if (await prefs.containsKey(itemKey)) {
+          await prefs.remove(itemKey);
+        }
+      }
+    }
+    // Reset the state to its initial, empty state
+    emit(const ShoppingListState());
+  }
+
 }
 

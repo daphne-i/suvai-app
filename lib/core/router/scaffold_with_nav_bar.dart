@@ -11,7 +11,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('--- CHECKPOINT 3: ScaffoldWithNavBar build() called. ---');
+
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: BottomNavigationBar(

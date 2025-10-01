@@ -8,7 +8,7 @@ import 'package:suvai/data/repositories/recipe_repository.dart';
 import 'package:suvai/data/repositories/shopping_list_repository.dart';
 
 Future<void> main() async {
-  print('--- CHECKPOINT 1: main() function started. ---');
+
   WidgetsFlutterBinding.ensureInitialized();
 
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
@@ -49,7 +49,7 @@ class SuvaiApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('--- CHECKPOINT 2: SuvaiApp build() called. ---');
+
     // --- 4. USE .value CONSTRUCTORS TO PROVIDE THE EXISTING INSTANCES ---
     return MultiRepositoryProvider(
       providers: [

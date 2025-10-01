@@ -58,13 +58,17 @@ class ShoppingListRepository {
   // 3. Simple categorization logic
   String _getCategoryForIngredient(String name) {
     final n = name.toLowerCase();
-    if (n.contains('onion') || n.contains('tomato') || n.contains('potato') || n.contains('ginger')) {
+    if (n.contains('onion') || n.contains('tomato') || n.contains('potato') || n.contains('ginger')
+        || n.contains('palak') || n.contains('garlic') || n.contains('chilli') || n.contains('green chilli')
+        || n.contains('carrot') || n.contains('beans') || n.contains('beetroot') || n.contains('yam')
+        || n.contains('cabbage') || n.contains('cauliflower') || n.contains('bitter gourd')
+        || n.contains('cucumber') || n.contains('lemon')) {
       return 'Produce';
     }
-    if (n.contains('milk') || n.contains('cheese') || n.contains('yogurt') || n.contains('paneer')) {
+    if (n.contains('milk') || n.contains('cheese') || n.contains('curd') || n.contains('paneer')) {
       return 'Dairy & Cold';
     }
-    if (n.contains('chicken') || n.contains('egg')) {
+    if (n.contains('chicken') || n.contains('egg') || n.contains('beef') || n.contains('mutton')) {
       return 'Meat & Poultry';
     }
     return 'Pantry';
