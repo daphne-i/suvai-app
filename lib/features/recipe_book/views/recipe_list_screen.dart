@@ -50,13 +50,9 @@ class _RecipeListView extends StatelessWidget {
                 decoration: InputDecoration(
                   hintText: 'Search recipes...',
                   prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.grey[850],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
+
+
+                             ),
                 onChanged: (value) {
                   context.read<RecipeListCubit>().searchQueryChanged(value);
                 },
@@ -111,15 +107,27 @@ class _RecipeListView extends StatelessWidget {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton:
+      Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            colors: [Colors.orange.shade600, Colors.red.shade400],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+      child: FloatingActionButton(
         heroTag: 'fab_recipe_list',
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         onPressed: () async {
           await context.push('/add-recipe');
           context.read<RecipeListCubit>().loadRecipes();
         },
-        child: const Icon(Icons.add, size: 32),
+        child: const Icon(Icons.add, size: 32, color: Colors.white),
       ),
-    );
+    ));
   }
 }
 
@@ -140,12 +148,10 @@ class _RecipeCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: Card(
         clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              // --- REPLACE THE IMAGE CONTAINER ---
               child: recipe.imagePath != null && recipe.imagePath!.isNotEmpty
                   ? Image.file(
                 File(recipe.imagePath!),
@@ -162,40 +168,18 @@ class _RecipeCard extends StatelessWidget {
               padding: const EdgeInsets.all(8.0),
               child: Text(
                 recipe.name,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            if (recipe.tags.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                child: Wrap(
-                  spacing: 4.0,
-                  runSpacing: 4.0,
-                  alignment: WrapAlignment.center,
-                  children: recipe.tags.map((tag) {
-                    return GestureDetector(
-                      onTap: () {
-                        context.read<RecipeListCubit>().filterByTag(tag);
-                      },
-                      child: Chip(
-                        label: Text(tag, style: const TextStyle(fontSize: 10)),
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
           ],
         ),
       ),
     );
   }
 }
-
 void _showDeleteConfirmation(BuildContext context, Recipe recipe) {
   showDialog(
     context: context,

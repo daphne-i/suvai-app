@@ -214,9 +214,9 @@ class _RecipeForm extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.add_a_photo_outlined, size: 40, color: Colors.white54),
+                    Icon(Icons.add_a_photo_outlined, size: 40),
                     SizedBox(height: 8),
-                    Text('Tap to add photo', style: TextStyle(color: Colors.white54)),
+                    Text('Tap to add photo'),
                   ],
                 ),
               ),
@@ -290,9 +290,9 @@ class _RecipeForm extends StatelessWidget {
           const SizedBox(height: 32),
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(24),
               gradient: LinearGradient(
-                colors: [Colors.orange.shade600, Colors.red.shade600],
+                colors: [Colors.orange.shade600, Colors.red.shade400],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
@@ -302,6 +302,7 @@ class _RecipeForm extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
               ),
               onPressed: () async {
                 await cubit.saveRecipe();
@@ -327,7 +328,7 @@ class _RecipeForm extends StatelessWidget {
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white)),
+      child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.black87)),
     );
   }
 
@@ -517,7 +518,7 @@ class _InfoChipInput extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.white70)),
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.black87)),
           const SizedBox(height: 2),
           TextFormField(
             initialValue: initialValue,

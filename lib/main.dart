@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:suvai/core/router/app_router.dart';
 import 'package:suvai/data/repositories/meal_plan_repository.dart';
@@ -61,24 +62,41 @@ class SuvaiApp extends StatelessWidget {
         routerConfig: goRouter,
         title: 'Suvai',
         theme: ThemeData(
-          brightness: Brightness.dark,
-          primaryColor: Colors.orange,
-          colorScheme: const ColorScheme.dark(
+          // Set the overall brightness to dark
+          brightness: Brightness.light,
+          // Use Poppins font for the whole app
+          textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme.apply(bodyColor: Colors.black87)),
+
+          // Define the core color scheme
+          colorScheme: const ColorScheme.light(
             primary: Colors.orange,
             secondary: Colors.redAccent,
           ),
-          scaffoldBackgroundColor: const Color(0xFF121212),
+
+          // Set the main background color
+          scaffoldBackgroundColor: Colors.white,
+
+          // Style for all cards in the app
           cardTheme: CardThemeData(
-            color: const Color(0xFF1E1E1E),
+            elevation: 5,
+          //  color: const Color(0xFF1E1E1E),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          floatingActionButtonTheme: const FloatingActionButtonThemeData(
-            backgroundColor: Colors.redAccent,
+
+          // Style for all text input fields
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.grey.shade100,
+            hintStyle: TextStyle(color: Colors.grey.shade700),
+            labelStyle: const TextStyle(color: Colors.black54), // For when the label is not focused
+            floatingLabelStyle: const TextStyle(color: Colors.black54), // For when the label is floating
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
           ),
-          appBarTheme: const AppBarTheme(
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-          ),
+
+          useMaterial3: true,
         ),
       ),
     );
