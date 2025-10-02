@@ -111,6 +111,7 @@ class _RecipeListView extends StatelessWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'fab_recipe_list',
         onPressed: () async {
           await context.push('/add-recipe');
           context.read<RecipeListCubit>().loadRecipes();

@@ -20,21 +20,17 @@ class RecipeDetailScreen extends StatelessWidget {
           backgroundColor: Colors.transparent,
           elevation: 0,
           actions: [
-            // Use a BlocBuilder to get the loaded recipe
             BlocBuilder<RecipeDetailCubit, RecipeDetailState>(
               builder: (context, state) {
-                // Only show the button if the recipe has loaded successfully
                 if (state.status == RecipeDetailStatus.success && state.recipe != null) {
                   return IconButton(
                     icon: const Icon(Icons.edit_outlined),
                     tooltip: 'Edit Recipe',
                     onPressed: () {
-                      // Navigate to the edit screen, passing the full recipe object
                       context.push('/edit-recipe', extra: state.recipe);
                     },
                   );
                 }
-                // Return an empty widget while loading or if there's an error
                 return const SizedBox.shrink();
               },
             ),
@@ -57,8 +53,31 @@ class RecipeDetailScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(recipe.name, style: Theme.of(context).textTheme.headlineLarge),
-                  const SizedBox(height: 24),
-                  // The "Start Cooking" button, as specified in the PRD
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _InfoChip(
+                          icon: Icons.group_outlined,
+                          label: 'Serves',
+                          value: recipe.servings.toString(),
+                        ),
+                        _InfoChip(
+                          icon: Icons.timer_outlined,
+                          label: 'Prep time',
+                          value: '${recipe.prepTimeMinutes} min',
+                        ),
+                        _InfoChip(
+                          icon: Icons.whatshot_outlined,
+                          label: 'Cook time',
+                          value: '${recipe.cookTimeMinutes} min',
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -96,11 +115,31 @@ class RecipeDetailScreen extends StatelessWidget {
     );
   }
 
-  // Helper to avoid showing .0 for whole numbers
   String _formatQuantity(double quantity) {
     if (quantity == quantity.toInt()) {
       return quantity.toInt().toString();
     }
     return quantity.toString();
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _InfoChip({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, size: 28, color: Colors.white70),
+        const SizedBox(height: 4),
+        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+      ],
+    );
   }
 }
