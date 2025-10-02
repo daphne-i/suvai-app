@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -18,19 +19,17 @@ class RecipeListScreen extends StatelessWidget {
   }
 }
 
+
 class _RecipeListView extends StatelessWidget {
   const _RecipeListView();
 
   @override
   Widget build(BuildContext context) {
-    final activeTagFilter =
-    context.select((RecipeListCubit cubit) => cubit.state.activeTagFilter);
     final theme = Theme.of(context);
 
     return Scaffold(
       drawer: const SettingsDrawer(),
       appBar: AppBar(
-        // --- THIS IS THE CORRECTED TITLE ---
         title: Text(
           'My Recipes (சுவை)',
           style: theme.textTheme.headlineSmall
@@ -38,17 +37,16 @@ class _RecipeListView extends StatelessWidget {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        centerTitle: false, // Align title to the left for a cleaner look
+        centerTitle: false,
       ),
       body: SafeArea(
         top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8), // Reduced spacing
-              TextField(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: TextField(
                 decoration: const InputDecoration(
                   hintText: 'Search recipes...',
                   prefixIcon: Icon(Icons.search),
@@ -57,58 +55,47 @@ class _RecipeListView extends StatelessWidget {
                   context.read<RecipeListCubit>().searchQueryChanged(value);
                 },
               ),
-              if (activeTagFilter != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12.0),
-                  child: Chip(
-                    label: Text('Filtering by: "$activeTagFilter"'),
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    onDeleted: () {
-                      context.read<RecipeListCubit>().clearTagFilter();
-                    },
-                  ),
-                ),
-              const SizedBox(height: 24),
-              Expanded(
-                child: BlocBuilder<RecipeListCubit, RecipeListState>(
-                  builder: (context, state) {
-                    if (state.status == RecipeListStatus.loading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (state.status == RecipeListStatus.failure) {
-                      return Center(
-                          child: Text(
-                              'Failed to load recipes: ${state.errorMessage}'));
-                    }
-                    if (state.filteredRecipes.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'No recipes found.',
-                          style: TextStyle(fontSize: 18),
-                        ),
-                      );
-                    }
-                    return GridView.builder(
-                      padding:
-                      const EdgeInsets.only(bottom: 80.0), // Space for FAB
-                      gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16.0,
-                        mainAxisSpacing: 16.0,
-                        childAspectRatio: 0.8,
-                      ),
-                      itemCount: state.filteredRecipes.length,
-                      itemBuilder: (context, index) {
-                        final recipe = state.filteredRecipes[index];
-                        return _RecipeCard(recipe: recipe);
-                      },
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: BlocBuilder<RecipeListCubit, RecipeListState>(
+                builder: (context, state) {
+                  if (state.status == RecipeListStatus.loading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (state.filteredRecipes.isEmpty) {
+                    return const Center(
+                      child: Text('No recipes found.'),
                     );
-                  },
-                ),
+                  }
+
+                  // --- NEW GROUPING LOGIC ---
+                  final groupedRecipes = <String, List<Recipe>>{};
+                  for (var recipe in state.filteredRecipes) {
+                    for (var tag in recipe.tags) {
+                      (groupedRecipes[tag] ??= []).add(recipe);
+                    }
+                  }
+                  final sortedTags = groupedRecipes.keys.sorted();
+
+                  // --- NEW CATEGORY LISTVIEW ---
+                  return ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 80),
+                    itemCount: sortedTags.length,
+                    itemBuilder: (context, index) {
+                      final tag = sortedTags[index];
+                      final recipesInGroup = groupedRecipes[tag]!;
+                      return _CategoryRow(
+                        tag: tag,
+                        recipes: recipesInGroup,
+                        allRecipes: state.recipes,
+                      );
+                    },
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
       floatingActionButton: Container(
@@ -151,6 +138,62 @@ class _RecipeListView extends StatelessWidget {
           child: const Icon(Icons.add, color: Colors.white),
         ),
       ),
+    );
+  }
+}
+
+class _CategoryRow extends StatelessWidget {
+  final String tag;
+  final List<Recipe> recipes;
+  final List<Recipe> allRecipes;
+
+  const _CategoryRow({
+    required this.tag,
+    required this.recipes,
+    required this.allRecipes,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                tag,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () {
+                  context.push('/recipes-by-tag', extra: {'tag': tag, 'recipes': allRecipes});
+                },
+                child: const Text('View All'),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 220, // Define a fixed height for the horizontal list
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            scrollDirection: Axis.horizontal,
+            itemCount: recipes.length,
+            itemBuilder: (context, index) {
+              return SizedBox(
+                width: 170, // Define a fixed width for the cards
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 12.0),
+                  child: _RecipeCard(recipe: recipes[index]),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

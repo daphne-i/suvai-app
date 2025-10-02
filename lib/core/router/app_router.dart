@@ -9,6 +9,7 @@ import 'package:suvai/features/meal_planner/views/meal_planner_screen.dart';
 import 'package:suvai/features/recipe_book/views/add_edit_recipe_screen.dart';
 import 'package:suvai/features/recipe_book/views/recipe_detail_screen.dart';
 import 'package:suvai/features/recipe_book/views/recipe_list_screen.dart';
+import 'package:suvai/features/recipe_book/views/tagged_recipe_list_screen.dart';
 import 'package:suvai/features/shopping_list/views/shopping_list_screen.dart';
 import 'package:suvai/features/cook_mode/views/cook_mode_screen.dart';
 
@@ -69,6 +70,17 @@ final goRouter = GoRouter(
         return CookModeScreen(recipe: recipe);
       },
     ),
-
+    GoRoute(
+      path: '/recipes-by-tag',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        // Pass the tag and the list of recipes as an 'extra' argument
+        final args = state.extra as Map<String, dynamic>;
+        return TaggedRecipeListScreen(
+          tag: args['tag'] as String,
+          allRecipes: args['recipes'] as List<Recipe>,
+        );
+      },
+    ),
   ],
 );
