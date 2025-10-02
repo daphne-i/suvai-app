@@ -5,6 +5,10 @@ import 'package:suvai/data/models/ingredient_model.dart';
 import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
 import 'package:suvai/features/recipe_book/cubit/recipe_list_cubit.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 // The Cubit to manage the state of the recipe form
 class RecipeFormCubit extends Cubit<Recipe> {
@@ -91,6 +95,27 @@ class RecipeFormCubit extends Cubit<Recipe> {
       await _recipeRepository.insertRecipe(cleanRecipe);
     }
   }
+
+  Future<void> pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: source);
+
+    if (pickedFile != null) {
+      // Get the app's document directory
+      final appDir = await getApplicationDocumentsDirectory();
+      // Generate a unique file name
+      final fileName = path.basename(pickedFile.path);
+      // Create a permanent path in the app's directory
+      final savedImagePath = path.join(appDir.path, fileName);
+
+      // Copy the picked image file to the permanent path
+      final file = File(pickedFile.path);
+      await file.copy(savedImagePath);
+
+      // Update the state with the new image path
+      emit(state.copyWith(imagePath: savedImagePath));
+    }
+  }
 }
 
 // --- MAIN SCREEN WIDGET ---
@@ -138,20 +163,62 @@ class _RecipeForm extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 16),
-          Container(
-            height: 150,
-            decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_a_photo_outlined, size: 40, color: Colors.white54),
-                  SizedBox(height: 8),
-                  Text('Tap to add photo', style: TextStyle(color: Colors.white54)),
-                ],
+          GestureDetector(
+            onTap: () {
+              // Show a dialog to choose between camera and gallery
+              showModalBottomSheet(
+                context: context,
+                builder: (builderContext) {
+                  return SafeArea(
+                    child: Wrap(
+                      children: <Widget>[
+                        ListTile(
+                          leading: const Icon(Icons.photo_library),
+                          title: const Text('Photo Library'),
+                          onTap: () {
+                            cubit.pickImage(ImageSource.gallery);
+                            Navigator.of(builderContext).pop();
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.photo_camera),
+                          title: const Text('Camera'),
+                          onTap: () {
+                            cubit.pickImage(ImageSource.camera);
+                            Navigator.of(builderContext).pop();
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+            child: Container(
+              height: 200,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              // Conditionally display the image or the placeholder
+              child: recipe.imagePath != null && recipe.imagePath!.isNotEmpty
+                  ? ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  File(recipe.imagePath!),
+                  fit: BoxFit.cover,
+                ),
+              )
+                  : const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add_a_photo_outlined, size: 40, color: Colors.white54),
+                    SizedBox(height: 8),
+                    Text('Tap to add photo', style: TextStyle(color: Colors.white54)),
+                  ],
+                ),
               ),
             ),
           ),

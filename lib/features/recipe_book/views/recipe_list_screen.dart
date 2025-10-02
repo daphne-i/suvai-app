@@ -5,6 +5,7 @@ import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
 import 'package:suvai/features/recipe_book/cubit/recipe_list_cubit.dart';
 import 'package:suvai/features/recipe_book/cubit/recipe_list_state.dart';
+import 'dart:io';
 
 class RecipeListScreen extends StatelessWidget {
   const RecipeListScreen({super.key});
@@ -144,7 +145,13 @@ class _RecipeCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: Container(
+              // --- REPLACE THE IMAGE CONTAINER ---
+              child: recipe.imagePath != null && recipe.imagePath!.isNotEmpty
+                  ? Image.file(
+                File(recipe.imagePath!),
+                fit: BoxFit.cover,
+              )
+                  : Container(
                 color: Colors.grey[800],
                 child: const Center(
                   child: Icon(Icons.photo_camera, color: Colors.white38, size: 50),
