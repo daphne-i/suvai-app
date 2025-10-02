@@ -79,8 +79,8 @@ class _ShoppingListView extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton:
-      Container(
+      // --- THIS IS THE CORRECTED FloatingActionButton CODE ---
+      floatingActionButton: Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: LinearGradient(
@@ -93,7 +93,7 @@ class _ShoppingListView extends StatelessWidget {
           heroTag: 'fab_shopping_list',
           backgroundColor: Colors.transparent,
           elevation: 0,
-          onPressed: () async {
+          onPressed: () {
             _showAddManualItemDialog(context);
           },
           child: const Icon(Icons.add, size: 32, color: Colors.white),
