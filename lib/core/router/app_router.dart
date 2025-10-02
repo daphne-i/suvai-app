@@ -9,6 +9,7 @@ import 'package:suvai/features/recipe_book/views/add_edit_recipe_screen.dart';
 import 'package:suvai/features/recipe_book/views/recipe_detail_screen.dart';
 import 'package:suvai/features/recipe_book/views/recipe_list_screen.dart';
 import 'package:suvai/features/shopping_list/views/shopping_list_screen.dart';
+import 'package:suvai/features/cook_mode/views/cook_mode_screen.dart';
 
 // 1. Add keys for the shell route and each branch
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -85,6 +86,14 @@ final goRouter = GoRouter(
           recipeRepository: RepositoryProvider.of<RecipeRepository>(context),
           recipe: recipe,
         );
+      },
+    ),
+    GoRoute(
+      path: '/cook',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final recipe = state.extra as Recipe;
+        return CookModeScreen(recipe: recipe);
       },
     ),
   ],

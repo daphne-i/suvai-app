@@ -85,7 +85,7 @@ class RecipeDetailScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       onPressed: () {
-                        // TODO: Navigate to Cook Mode
+                        context.push('/cook', extra: recipe);
                       },
                       child: const Text('Start Cooking', style: TextStyle(fontSize: 16)),
                     ),
