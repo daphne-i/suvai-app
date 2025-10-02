@@ -1,5 +1,3 @@
-// lib/features/recipe_book/views/add_edit_recipe_screen.dart
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,7 +10,7 @@ import 'package:suvai/data/models/instruction_model.dart';
 import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
 
-// (The RecipeFormCubit remains exactly the same)
+// The Cubit to manage the state of the recipe form
 class RecipeFormCubit extends Cubit<Recipe> {
   final RecipeRepository _recipeRepository;
 
@@ -41,6 +39,7 @@ class RecipeFormCubit extends Cubit<Recipe> {
     ));
   }
 
+  // --- INGREDIENT METHODS ---
   void addIngredient() {
     final newIngredients = List<Ingredient>.from(state.ingredients)
       ..add(const Ingredient(quantity: 0, unit: 'g', name: ''));
@@ -67,6 +66,7 @@ class RecipeFormCubit extends Cubit<Recipe> {
     emit(state.copyWith(ingredients: newIngredients));
   }
 
+  // --- INSTRUCTION METHODS ---
   void addInstruction() {
     final newInstructions = List<Instruction>.from(state.instructions)
       ..add(const Instruction(description: ''));
@@ -88,14 +88,20 @@ class RecipeFormCubit extends Cubit<Recipe> {
     emit(state.copyWith(instructions: newInstructions));
   }
 
-  void tagsChanged(String tagsString) {
-    final tags = tagsString
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-    emit(state.copyWith(tags: tags));
+  // --- TAGS METHODS (UPDATED) ---
+  void addTag(String tag) {
+    final newTag = tag.trim().replaceAll(',', ''); // Clean the tag
+    if (newTag.isNotEmpty && !state.tags.contains(newTag)) {
+      final updatedTags = List<String>.from(state.tags)..add(newTag);
+      emit(state.copyWith(tags: updatedTags));
+    }
   }
+
+  void removeTag(String tag) {
+    final updatedTags = List<String>.from(state.tags)..remove(tag);
+    emit(state.copyWith(tags: updatedTags));
+  }
+
 
   Future<void> saveRecipe() async {
     final cleanRecipe = state.copyWith(
@@ -128,8 +134,6 @@ class RecipeFormCubit extends Cubit<Recipe> {
   }
 }
 
-
-// --- THIS IS THE UPDATED SCREEN WIDGET ---
 class AddEditRecipeScreen extends StatelessWidget {
   final Recipe? recipe;
 
@@ -140,7 +144,6 @@ class AddEditRecipeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The BlocProvider now wraps the sheet's content directly.
     return BlocProvider(
       create: (context) => RecipeFormCubit(
         context.read<RecipeRepository>(),
@@ -154,6 +157,7 @@ class AddEditRecipeScreen extends StatelessWidget {
           maxChildSize: 0.9,
           expand: false,
           builder: (context, scrollController) {
+            // Convert _RecipeForm to StatefulWidget
             return SingleChildScrollView(
               controller: scrollController,
               child: const _RecipeForm(),
@@ -165,8 +169,29 @@ class AddEditRecipeScreen extends StatelessWidget {
   }
 }
 
-class _RecipeForm extends StatelessWidget {
+// --- CONVERTED TO A STATEFULWIDGET ---
+class _RecipeForm extends StatefulWidget {
   const _RecipeForm();
+
+  @override
+  State<_RecipeForm> createState() => _RecipeFormState();
+}
+
+class _RecipeFormState extends State<_RecipeForm> {
+  // Controller to manage the tag input field
+  final _tagController = TextEditingController();
+
+  @override
+  void dispose() {
+    _tagController.dispose();
+    super.dispose();
+  }
+
+  void _submitTag() {
+    context.read<RecipeFormCubit>().addTag(_tagController.text);
+    _tagController.clear();
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -185,7 +210,6 @@ class _RecipeForm extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag Handle
           Center(
             child: Container(
               width: 40,
@@ -197,14 +221,14 @@ class _RecipeForm extends StatelessWidget {
               ),
             ),
           ),
-          // Title
           Text(
             isEditing ? 'Edit Recipe' : 'Add New Recipe',
             textAlign: TextAlign.center,
-            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            style: theme.textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
-          // --- The rest of the form is the same as before ---
+          // ... (Image picker and info chips are unchanged)
           GestureDetector(
             onTap: () {
               showModalBottomSheet(
@@ -307,12 +331,10 @@ class _RecipeForm extends StatelessWidget {
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          _StyledTextField(
-            key: Key('tags_${recipe.id}'),
-            hintText: 'Tags (e.g., Breakfast, Spicy, Vegetarian)',
-            initialValue: recipe.tags.join(', '),
-            onChanged: (value) => cubit.tagsChanged(value),
-          ),
+
+          // --- NEW TAG INPUT UI ---
+          _buildTagsSection(context, recipe.tags),
+
           const SizedBox(height: 24),
           _buildSectionTitle(context, 'Ingredients'),
           ..._buildIngredientsInputs(
@@ -343,7 +365,7 @@ class _RecipeForm extends StatelessWidget {
             onPressed: () async {
               await cubit.saveRecipe();
               if (context.mounted) {
-                Navigator.of(context).pop(); // Use Navigator.pop for sheets
+                Navigator.of(context).pop();
               }
             },
             child: const Text(
@@ -358,6 +380,41 @@ class _RecipeForm extends StatelessWidget {
       ),
     );
   }
+
+  // --- NEW WIDGET FOR TAGS ---
+  Widget _buildTagsSection(BuildContext context, List<String> tags) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (tags.isNotEmpty)
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 4.0,
+            children: tags.map((tag) {
+              return Chip(
+                label: Text(tag),
+                onDeleted: () {
+                  context.read<RecipeFormCubit>().removeTag(tag);
+                },
+              );
+            }).toList(),
+          ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _tagController,
+          decoration: InputDecoration(
+            hintText: 'Add a tag and press enter...',
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: _submitTag,
+            ),
+          ),
+          onSubmitted: (_) => _submitTag(),
+        ),
+      ],
+    );
+  }
+
 
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
@@ -489,6 +546,8 @@ class _RecipeForm extends StatelessWidget {
   }
 }
 
+// ... (_StyledTextField and _InfoChipInput are unchanged)
+
 class _StyledTextField extends StatelessWidget {
   final String? initialValue;
   final String? hintText;
@@ -545,8 +604,10 @@ class _InfoChipInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final backgroundColor = isPrimary ? colorScheme.primary : colorScheme.secondary;
-    final foregroundColor = isPrimary ? colorScheme.onPrimary : colorScheme.onSecondary;
+    final backgroundColor =
+    isPrimary ? colorScheme.primary : colorScheme.secondary;
+    final foregroundColor =
+    isPrimary ? colorScheme.onPrimary : colorScheme.onSecondary;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

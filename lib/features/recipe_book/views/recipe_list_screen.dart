@@ -2,13 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:suvai/core/services/settings_screen.dart';
 import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/features/recipe_book/cubit/recipe_list_cubit.dart';
 import 'package:suvai/features/recipe_book/cubit/recipe_list_state.dart';
 import 'package:suvai/features/recipe_book/views/add_edit_recipe_screen.dart';
 import 'package:suvai/features/recipe_book/views/recipe_detail_screen.dart';
-
+import 'package:suvai/core/services/settings_screen.dart';
 
 class RecipeListScreen extends StatelessWidget {
   const RecipeListScreen({super.key});
@@ -31,13 +30,15 @@ class _RecipeListView extends StatelessWidget {
     return Scaffold(
       drawer: const SettingsDrawer(),
       appBar: AppBar(
+        // --- THIS IS THE CORRECTED TITLE ---
         title: Text(
           'My Recipes (சுவை)',
-          style: theme.textTheme.headlineLarge
+          style: theme.textTheme.headlineSmall
               ?.copyWith(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        centerTitle: false, // Align title to the left for a cleaner look
       ),
       body: SafeArea(
         top: false,
@@ -46,7 +47,7 @@ class _RecipeListView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 16),
+              const SizedBox(height: 8), // Reduced spacing
               TextField(
                 decoration: const InputDecoration(
                   hintText: 'Search recipes...',
@@ -88,7 +89,8 @@ class _RecipeListView extends StatelessWidget {
                       );
                     }
                     return GridView.builder(
-                      padding: const EdgeInsets.only(bottom: 80.0), // Space for FAB
+                      padding:
+                      const EdgeInsets.only(bottom: 80.0), // Space for FAB
                       gridDelegate:
                       const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
@@ -115,7 +117,10 @@ class _RecipeListView extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: const LinearGradient(
-            colors: [Color(0xFFEF4747), Color(0xFFD93A3A)], // Vibrant Red -> Darker Red
+            colors: [
+              Color(0xFFEF4747),
+              Color(0xFFD93A3A)
+            ], // Vibrant Red -> Darker Red
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
