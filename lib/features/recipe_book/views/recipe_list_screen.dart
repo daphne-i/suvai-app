@@ -1,25 +1,26 @@
+// lib/features/recipe_book/views/recipe_list_screen.dart
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:suvai/data/models/recipe_model.dart';
-import 'package:suvai/data/repositories/recipe_repository.dart';
 import 'package:suvai/features/recipe_book/cubit/recipe_list_cubit.dart';
 import 'package:suvai/features/recipe_book/cubit/recipe_list_state.dart';
 import 'package:suvai/features/recipe_book/views/add_edit_recipe_screen.dart';
 import 'package:suvai/features/recipe_book/views/recipe_detail_screen.dart';
+
+import '../../../core/services/settings_screen.dart';
+// Import the settings drawer
+
+
 
 class RecipeListScreen extends StatelessWidget {
   const RecipeListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => RecipeListCubit(
-        RepositoryProvider.of<RecipeRepository>(context),
-      )..loadRecipes(),
-      child: const _RecipeListView(),
-    );
+    return const _RecipeListView();
   }
 }
 
@@ -32,18 +33,24 @@ class _RecipeListView extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
+      // --- ADD THE DRAWER HERE ---
+      drawer: const SettingsDrawer(),
+      appBar: AppBar(
+        // The default hamburger icon will appear automatically.
+        // You can remove the settings icon from actions if you want.
+        title: Text(
+          'My Recipes (சுவை)',
+          style: theme.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.bold),
+        ),
+      ),
       body: SafeArea(
+        top: false, // AppBar provides top safety
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 24),
-              Text(
-                'My Recipes (சுவை)',
-                style: theme.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               TextField(
                 decoration: const InputDecoration(
                   hintText: 'Search recipes...',
@@ -83,7 +90,7 @@ class _RecipeListView extends StatelessWidget {
                       );
                     }
                     return GridView.builder(
-                      padding: const EdgeInsets.only(bottom: 80.0), // Space for FAB
+                      padding: const EdgeInsets.only(bottom: 80.0),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         crossAxisSpacing: 16.0,
@@ -103,49 +110,48 @@ class _RecipeListView extends StatelessWidget {
           ),
         ),
       ),
-        floatingActionButton: Container(
-          width: 56.0, // Standard FAB size
-          height: 56.0,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              colors: [Colors.orange.shade600, Colors.red.shade400],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      floatingActionButton: Container(
+        width: 56.0,
+        height: 56.0,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            colors: [Colors.orange.shade600, Colors.red.shade400],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black38,
+              blurRadius: 10,
+              offset: Offset(0, 4),
             ),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black38,
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: FloatingActionButton(
-            heroTag: 'fab_recipe_list',
-            backgroundColor: Colors.transparent, // Shows the gradient
-            elevation: 0,
-            highlightElevation: 0,
-            shape: const CircleBorder(), // This is the key fix
-            onPressed: () {
-              // --- THIS IS THE NEW BEHAVIOR ---
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true, // IMPORTANT for keyboard
-                backgroundColor: Colors.transparent,
-                builder: (_) => const AddEditRecipeScreen(),
-              ).then((_) {
-                // Refresh the list after the sheet is closed
-                context.read<RecipeListCubit>().loadRecipes();
-              });
-            },
-            child: const Icon(Icons.add, color: Colors.white),
-          ),
+          ],
         ),
+        child: FloatingActionButton(
+          heroTag: 'fab_recipe_list',
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          highlightElevation: 0,
+          shape: const CircleBorder(),
+          onPressed: () {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => const AddEditRecipeScreen(),
+            ).then((_) {
+              context.read<RecipeListCubit>().loadRecipes();
+            });
+          },
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
+      ),
     );
   }
 }
 
+// ... _RecipeCard and _showDeleteConfirmation remain unchanged ...
 class _RecipeCard extends StatelessWidget {
   const _RecipeCard({required this.recipe});
   final Recipe recipe;
@@ -155,13 +161,11 @@ class _RecipeCard extends StatelessWidget {
     return Card(
       child: InkWell(
         onTap: () {
-          // --- THIS IS THE NEW onTap BEHAVIOR ---
           showModalBottomSheet(
             context: context,
-            isScrollControlled: true, // Allows the sheet to be almost full screen
-            backgroundColor: Colors.transparent, // Make it transparent to respect child's radius
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
             builder: (_) => SizedBox(
-              // Constrain the height to 90% of the screen
               height: MediaQuery.of(context).size.height * 0.9,
               child: RecipeDetailScreen(recipeId: recipe.id!),
             ),
@@ -174,7 +178,6 @@ class _RecipeCard extends StatelessWidget {
         child: Stack(
           alignment: Alignment.bottomLeft,
           children: [
-            // Image
             if (recipe.imagePath != null && recipe.imagePath!.isNotEmpty)
               Positioned.fill(
                 child: Image.file(
@@ -193,7 +196,6 @@ class _RecipeCard extends StatelessWidget {
                   ),
                 ),
               ),
-            // Gradient Overlay
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -203,7 +205,6 @@ class _RecipeCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Recipe Name
             Padding(
               padding: const EdgeInsets.all(12.0),
               child: Text(

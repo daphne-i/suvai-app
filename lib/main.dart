@@ -7,6 +7,7 @@ import 'package:suvai/core/router/app_router.dart';
 import 'package:suvai/data/repositories/meal_plan_repository.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
 import 'package:suvai/data/repositories/shopping_list_repository.dart';
+import 'package:suvai/features/recipe_book/cubit/recipe_list_cubit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +53,10 @@ class SuvaiApp extends StatelessWidget {
         RepositoryProvider.value(value: mealPlanRepository),
         RepositoryProvider.value(value: shoppingListRepository),
       ],
+        child: BlocProvider<RecipeListCubit>(
+          create: (context) => RecipeListCubit(
+            context.read<RecipeRepository>(),
+          )..loadRecipes(),
       child: MaterialApp.router(
         routerConfig: goRouter,
         title: 'Suvai',
@@ -126,6 +131,6 @@ class SuvaiApp extends StatelessWidget {
           useMaterial3: true,
         ),
       ),
-    );
+    ));
   }
 }

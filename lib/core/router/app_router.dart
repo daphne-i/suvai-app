@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:suvai/core/router/scaffold_with_nav_bar.dart';
+import 'package:suvai/core/services/settings_screen.dart';
 import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
 import 'package:suvai/features/meal_planner/views/meal_planner_screen.dart';
@@ -68,5 +69,6 @@ final goRouter = GoRouter(
         return CookModeScreen(recipe: recipe);
       },
     ),
+
   ],
 );
