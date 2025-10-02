@@ -1,5 +1,8 @@
+// lib/data/models/recipe_model.dart
+
 import 'package:equatable/equatable.dart';
 import 'ingredient_model.dart';
+import 'instruction_model.dart'; // Import the new model
 
 class Recipe extends Equatable {
   final int? id;
@@ -9,7 +12,7 @@ class Recipe extends Equatable {
   final int prepTimeMinutes;
   final int cookTimeMinutes;
   final List<Ingredient> ingredients;
-  final List<String> instructions;
+  final List<Instruction> instructions; // Change this line
   final List<String> tags;
 
   const Recipe({
@@ -20,7 +23,7 @@ class Recipe extends Equatable {
     required this.prepTimeMinutes,
     required this.cookTimeMinutes,
     required this.ingredients,
-    required this.instructions,
+    required this.instructions, // And this one
     required this.tags,
   });
 
@@ -32,7 +35,7 @@ class Recipe extends Equatable {
     int? prepTimeMinutes,
     int? cookTimeMinutes,
     List<Ingredient>? ingredients,
-    List<String>? instructions,
+    List<Instruction>? instructions, // And this one
     List<String>? tags,
   }) {
     return Recipe(
@@ -43,7 +46,7 @@ class Recipe extends Equatable {
       prepTimeMinutes: prepTimeMinutes ?? this.prepTimeMinutes,
       cookTimeMinutes: cookTimeMinutes ?? this.cookTimeMinutes,
       ingredients: ingredients ?? this.ingredients,
-      instructions: instructions ?? this.instructions,
+      instructions: instructions ?? this.instructions, // And this one
       tags: tags ?? this.tags,
     );
   }

@@ -113,7 +113,7 @@ class RecipeDetailScreen extends StatelessWidget {
                   for (int i = 0; i < recipe.instructions.length; i++)
                     ListTile(
                       leading: Text('${i + 1}.', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      title: Text(recipe.instructions[i]),
+                      title: Text(recipe.instructions[i].description),
                     ),
                 ],
               ),

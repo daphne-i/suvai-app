@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:suvai/core/database/database_service.dart';
 import 'package:suvai/data/models/ingredient_model.dart';
 import 'package:suvai/data/models/recipe_model.dart';
+import 'package:suvai/data/models/instruction_model.dart';
 
 class RecipeRepository {
   final DatabaseService _dbService = DatabaseService();
@@ -10,34 +11,34 @@ class RecipeRepository {
   Future<List<Recipe>> getAllRecipes() async {
     final db = await _dbService.database;
 
-    // 1. Fetch all recipe entries from the 'recipes' table.
     final List<Map<String, dynamic>> recipeMaps = await db.query('recipes');
 
-    // 2. Iterate over each recipe map to fetch its associated ingredients.
     final List<Recipe> recipes = [];
     for (var recipeMap in recipeMaps) {
       final recipeId = recipeMap['id'] as int;
 
-      // Fetch ingredients for the current recipe
       final List<Map<String, dynamic>> ingredientMaps = await db.query(
         'ingredients',
         where: 'recipeId = ?',
         whereArgs: [recipeId],
       );
 
-      // Map the raw ingredient data to Ingredient models
       final ingredients = ingredientMaps.map((ingMap) {
-        return Ingredient(
-          id: ingMap['id'],
-          recipeId: ingMap['recipeId'],
-          name: ingMap['name'],
-          quantity: ingMap['quantity'],
-          unit: ingMap['unit'],
-          preparation: ingMap['preparation'],
-        );
+        return Ingredient.fromMap(ingMap);
       }).toList();
 
-      // 3. Construct the final Recipe model
+      // THIS IS THE CORRECTED LOGIC
+      final dynamic decodedInstructions = jsonDecode(recipeMap['instructions']);
+      final instructions = (decodedInstructions as List).map((i) {
+        if (i is String) {
+          // This handles the old data format (List<String>)
+          return Instruction(description: i);
+        } else {
+          // This handles the new data format (List<Instruction>)
+          return Instruction.fromJson(i);
+        }
+      }).toList();
+
       recipes.add(
         Recipe(
           id: recipeId,
@@ -46,8 +47,7 @@ class RecipeRepository {
           servings: recipeMap['servings'],
           prepTimeMinutes: recipeMap['prepTimeMinutes'],
           cookTimeMinutes: recipeMap['cookTimeMinutes'],
-          // Decode the JSON strings back into lists
-          instructions: List<String>.from(jsonDecode(recipeMap['instructions'])),
+          instructions: instructions,
           tags: List<String>.from(jsonDecode(recipeMap['tags'])),
           ingredients: ingredients,
         ),
@@ -58,10 +58,7 @@ class RecipeRepository {
 
   Future<void> insertRecipe(Recipe recipe) async {
     final db = await _dbService.database;
-
-    // Use a transaction to ensure both operations succeed or fail together.
     await db.transaction((txn) async {
-      // 1. Insert the recipe into the 'recipes' table.
       final recipeId = await txn.insert(
         'recipes',
         {
@@ -70,13 +67,12 @@ class RecipeRepository {
           'servings': recipe.servings,
           'prepTimeMinutes': recipe.prepTimeMinutes,
           'cookTimeMinutes': recipe.cookTimeMinutes,
-          'instructions': jsonEncode(recipe.instructions),
+          'instructions': jsonEncode(recipe.instructions.map((i) => i.toJson()).toList()),
           'tags': jsonEncode(recipe.tags),
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
-      // 2. Insert each ingredient into the 'ingredients' table.
       for (final ingredient in recipe.ingredients) {
         await txn.insert(
           'ingredients',
@@ -96,7 +92,6 @@ class RecipeRepository {
   Future<void> updateRecipe(Recipe recipe) async {
     final db = await _dbService.database;
     await db.transaction((txn) async {
-      // 1. Update the main recipe entry
       await txn.update(
         'recipes',
         {
@@ -105,17 +100,15 @@ class RecipeRepository {
           'servings': recipe.servings,
           'prepTimeMinutes': recipe.prepTimeMinutes,
           'cookTimeMinutes': recipe.cookTimeMinutes,
-          'instructions': jsonEncode(recipe.instructions),
+          'instructions': jsonEncode(recipe.instructions.map((i) => i.toJson()).toList()),
           'tags': jsonEncode(recipe.tags),
         },
         where: 'id = ?',
         whereArgs: [recipe.id],
       );
 
-      // 2. Delete all old ingredients associated with this recipe
       await txn.delete('ingredients', where: 'recipeId = ?', whereArgs: [recipe.id]);
 
-      // 3. Insert the new list of ingredients
       for (final ingredient in recipe.ingredients) {
         await txn.insert('ingredients', {
           'recipeId': recipe.id,
@@ -128,7 +121,6 @@ class RecipeRepository {
     });
   }
 
-  // --- ADD THIS NEW METHOD ---
   Future<void> deleteRecipe(int id) async {
     final db = await _dbService.database;
     await db.delete(
@@ -136,13 +128,11 @@ class RecipeRepository {
       where: 'id = ?',
       whereArgs: [id],
     );
-    // Note: The ON DELETE CASCADE constraint in our schema will automatically delete associated ingredients.
   }
 
   Future<Recipe?> getRecipeById(int id) async {
     final db = await _dbService.database;
 
-    // 1. Fetch the recipe
     final List<Map<String, dynamic>> recipeMaps = await db.query(
       'recipes',
       where: 'id = ?',
@@ -153,7 +143,6 @@ class RecipeRepository {
       return null;
     }
 
-    // 2. Fetch its ingredients
     final List<Map<String, dynamic>> ingredientMaps = await db.query(
       'ingredients',
       where: 'recipeId = ?',
@@ -161,7 +150,18 @@ class RecipeRepository {
     );
     final ingredients = ingredientMaps.map((im) => Ingredient.fromMap(im)).toList();
 
-    // 3. Combine them into a Recipe object
+    // THIS IS THE CORRECTED LOGIC
+    final dynamic decodedInstructions = jsonDecode(recipeMaps.first['instructions']);
+    final instructions = (decodedInstructions as List).map((i) {
+      if (i is String) {
+        // This handles the old data format (List<String>)
+        return Instruction(description: i);
+      } else {
+        // This handles the new data format (List<Instruction>)
+        return Instruction.fromJson(i);
+      }
+    }).toList();
+
     final recipeMap = recipeMaps.first;
     return Recipe(
       id: recipeMap['id'],
@@ -170,7 +170,7 @@ class RecipeRepository {
       servings: recipeMap['servings'],
       prepTimeMinutes: recipeMap['prepTimeMinutes'],
       cookTimeMinutes: recipeMap['cookTimeMinutes'],
-      instructions: (jsonDecode(recipeMap['instructions']) as List<dynamic>).cast<String>(),
+      instructions: instructions,
       tags: (jsonDecode(recipeMap['tags']) as List<dynamic>).cast<String>(),
       ingredients: ingredients,
     );

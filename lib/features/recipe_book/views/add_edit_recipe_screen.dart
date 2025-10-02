@@ -1,14 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 import 'package:suvai/data/models/ingredient_model.dart';
+import 'package:suvai/data/models/instruction_model.dart';
 import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
-import 'package:suvai/features/recipe_book/cubit/recipe_list_cubit.dart';
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as path;
 
 // The Cubit to manage the state of the recipe form
 class RecipeFormCubit extends Cubit<Recipe> {
@@ -22,11 +23,15 @@ class RecipeFormCubit extends Cubit<Recipe> {
         prepTimeMinutes: 15,
         cookTimeMinutes: 30,
         ingredients: [Ingredient(quantity: 0, unit: 'g', name: '')],
-        instructions: [''],
+        instructions: [Instruction(description: '')],
         tags: [],
       ));
 
-  void updateField({String? name, int? servings, int? prepTimeMinutes, int? cookTimeMinutes}) {
+  void updateField(
+      {String? name,
+        int? servings,
+        int? prepTimeMinutes,
+        int? cookTimeMinutes}) {
     emit(state.copyWith(
       name: name,
       servings: servings,
@@ -42,7 +47,8 @@ class RecipeFormCubit extends Cubit<Recipe> {
     emit(state.copyWith(ingredients: newIngredients));
   }
 
-  void updateIngredient(int index, {double? quantity, String? unit, String? name, String? prep}) {
+  void updateIngredient(int index,
+      {double? quantity, String? unit, String? name, String? prep}) {
     final newIngredients = List<Ingredient>.from(state.ingredients);
     final old = newIngredients[index];
     newIngredients[index] = Ingredient(
@@ -56,37 +62,49 @@ class RecipeFormCubit extends Cubit<Recipe> {
   }
 
   void removeIngredient(int index) {
-    final newIngredients = List<Ingredient>.from(state.ingredients)..removeAt(index);
+    final newIngredients = List<Ingredient>.from(state.ingredients)
+      ..removeAt(index);
     emit(state.copyWith(ingredients: newIngredients));
   }
 
   // --- INSTRUCTION METHODS ---
   void addInstruction() {
-    final newInstructions = List<String>.from(state.instructions)..add('');
+    final newInstructions = List<Instruction>.from(state.instructions)
+      ..add(const Instruction(description: ''));
     emit(state.copyWith(instructions: newInstructions));
   }
 
-  void updateInstruction(int index, String text) {
-    final newInstructions = List<String>.from(state.instructions);
-    newInstructions[index] = text;
+  void updateInstruction(int index, String text, {int? duration}) {
+    final newInstructions = List<Instruction>.from(state.instructions);
+    newInstructions[index] = Instruction(
+        description: text,
+        durationInMinutes: duration ?? newInstructions[index].durationInMinutes);
     emit(state.copyWith(instructions: newInstructions));
   }
 
   void removeInstruction(int index) {
-    final newInstructions = List<String>.from(state.instructions)..removeAt(index);
+    final newInstructions = List<Instruction>.from(state.instructions)
+      ..removeAt(index);
     emit(state.copyWith(instructions: newInstructions));
   }
 
   // --- TAGS METHOD ---
   void tagsChanged(String tagsString) {
-    final tags = tagsString.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    final tags = tagsString
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
     emit(state.copyWith(tags: tags));
   }
 
   Future<void> saveRecipe() async {
     final cleanRecipe = state.copyWith(
-      ingredients: state.ingredients.where((i) => i.name.trim().isNotEmpty).toList(),
-      instructions: state.instructions.where((i) => i.trim().isNotEmpty).toList(),
+      ingredients:
+      state.ingredients.where((i) => i.name.trim().isNotEmpty).toList(),
+      instructions: state.instructions
+          .where((i) => i.description.trim().isNotEmpty)
+          .toList(),
     );
 
     if (cleanRecipe.id != null) {
@@ -138,9 +156,9 @@ class AddEditRecipeScreen extends StatelessWidget {
           title: Text(recipe == null ? 'Add New Recipe' : 'Edit Recipe'),
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
-          child: const _RecipeForm(),
+        body: const SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 40),
+          child: _RecipeForm(),
         ),
       ),
     );
@@ -230,7 +248,8 @@ class _RecipeForm extends StatelessWidget {
                   key: Key('servings_${recipe.id}'),
                   label: 'Servings',
                   initialValue: recipe.servings.toString(),
-                  onChanged: (v) => cubit.updateField(servings: int.tryParse(v) ?? 1),
+                  onChanged: (v) =>
+                      cubit.updateField(servings: int.tryParse(v) ?? 1),
                   isPrimary: true,
                 ),
               ),
@@ -239,8 +258,9 @@ class _RecipeForm extends StatelessWidget {
                 child: _InfoChipInput(
                   key: Key('prep_time_${recipe.id}'),
                   label: 'Prep Time (mins)',
-                  initialValue: recipe.prepTimeMinutes.toString(), // <-- FIX THIS
-                  onChanged: (v) => cubit.updateField(prepTimeMinutes: int.tryParse(v) ?? 0), // <-- FIX THIS
+                  initialValue: recipe.prepTimeMinutes.toString(),
+                  onChanged: (v) =>
+                      cubit.updateField(prepTimeMinutes: int.tryParse(v) ?? 0),
                 ),
               ),
               const SizedBox(width: 12),
@@ -249,7 +269,8 @@ class _RecipeForm extends StatelessWidget {
                   key: Key('cook_time_${recipe.id}'),
                   label: 'Cook Time (mins)',
                   initialValue: recipe.cookTimeMinutes.toString(),
-                  onChanged: (v) => cubit.updateField(cookTimeMinutes: int.tryParse(v) ?? 0),
+                  onChanged: (v) =>
+                      cubit.updateField(cookTimeMinutes: int.tryParse(v) ?? 0),
                 ),
               ),
             ],
@@ -302,7 +323,8 @@ class _RecipeForm extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24)),
               ),
               onPressed: () async {
                 await cubit.saveRecipe();
@@ -328,14 +350,20 @@ class _RecipeForm extends StatelessWidget {
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.black87)),
+      child: Text(title,
+          style: Theme.of(context)
+              .textTheme
+              .titleLarge
+              ?.copyWith(color: Colors.black87)),
     );
   }
 
-  List<Widget> _buildIngredientsInputs(BuildContext context, List<Ingredient> ingredients, RecipeFormCubit cubit, int? recipeId) {
+  List<Widget> _buildIngredientsInputs(BuildContext context,
+      List<Ingredient> ingredients, RecipeFormCubit cubit, int? recipeId) {
     return List.generate(ingredients.length, (index) {
       final ingredient = ingredients[index];
-      final ingredientKey = Key('ingredient_${recipeId}_${ingredient.id ?? 'new_$index'}');
+      final ingredientKey =
+      Key('ingredient_${recipeId}_${ingredient.id ?? 'new_$index'}');
       return Card(
         key: ingredientKey,
         margin: const EdgeInsets.only(bottom: 12),
@@ -358,8 +386,11 @@ class _RecipeForm extends StatelessWidget {
                     flex: 1,
                     child: _StyledTextField(
                       hintText: 'Qty',
-                      initialValue: ingredient.quantity > 0 ? ingredient.quantity.toString() : '',
-                      onChanged: (v) => cubit.updateIngredient(index, quantity: double.tryParse(v)),
+                      initialValue: ingredient.quantity > 0
+                          ? ingredient.quantity.toString()
+                          : '',
+                      onChanged: (v) => cubit.updateIngredient(index,
+                          quantity: double.tryParse(v)),
                       keyboardType: TextInputType.number,
                     ),
                   ),
@@ -397,7 +428,8 @@ class _RecipeForm extends StatelessWidget {
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.grey.withOpacity(0.1),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
@@ -406,7 +438,8 @@ class _RecipeForm extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                    icon: const Icon(Icons.delete_outline,
+                        color: Colors.redAccent),
                     onPressed: () => cubit.removeIngredient(index),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -420,8 +453,10 @@ class _RecipeForm extends StatelessWidget {
     });
   }
 
-  List<Widget> _buildInstructionsInputs(BuildContext context, List<String> instructions, RecipeFormCubit cubit, int? recipeId) {
+  List<Widget> _buildInstructionsInputs(BuildContext context,
+      List<Instruction> instructions, RecipeFormCubit cubit, int? recipeId) {
     return List.generate(instructions.length, (index) {
+      final instruction = instructions[index];
       final instructionKey = Key('instruction_${recipeId}_$index');
       return Padding(
         key: instructionKey,
@@ -432,9 +467,21 @@ class _RecipeForm extends StatelessWidget {
             Expanded(
               child: _StyledTextField(
                 labelText: 'Step ${index + 1}',
-                initialValue: instructions[index],
+                initialValue: instruction.description,
                 onChanged: (v) => cubit.updateInstruction(index, v),
                 maxLines: null,
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 100,
+              child: _StyledTextField(
+                labelText: 'Time (mins)',
+                initialValue: instruction.durationInMinutes?.toString() ?? '',
+                onChanged: (v) => cubit.updateInstruction(
+                    index, instruction.description,
+                    duration: int.tryParse(v)),
+                keyboardType: TextInputType.number,
               ),
             ),
             IconButton(
@@ -479,7 +526,8 @@ class _StyledTextField extends StatelessWidget {
         labelText: labelText,
         filled: true,
         fillColor: Colors.grey.withOpacity(0.1),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding:
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -512,20 +560,23 @@ class _InfoChipInput extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isPrimary ? Colors.orange.shade800 : Colors.grey.withOpacity(0.1),
+        color:
+        isPrimary ? Colors.orange.shade800 : Colors.grey.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.black87)),
+          Text(label,
+              style: const TextStyle(fontSize: 12, color: Colors.black87)),
           const SizedBox(height: 2),
           TextFormField(
             initialValue: initialValue,
             onChanged: onChanged,
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.2),
+            style:
+            const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.2),
             decoration: const InputDecoration(
               border: InputBorder.none,
               isDense: true,
