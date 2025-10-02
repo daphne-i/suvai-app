@@ -9,7 +9,6 @@ import 'package:suvai/data/repositories/recipe_repository.dart';
 import 'package:suvai/data/repositories/shopping_list_repository.dart';
 
 Future<void> main() async {
-
   WidgetsFlutterBinding.ensureInitialized();
 
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
@@ -17,7 +16,6 @@ Future<void> main() async {
     databaseFactory = databaseFactoryFfi;
   }
 
-  // --- 1. CREATE ALL REPOSITORIES MANUALLY HERE ---
   final recipeRepository = RecipeRepository();
   final mealPlanRepository = MealPlanRepository();
   final shoppingListRepository = ShoppingListRepository(
@@ -26,7 +24,6 @@ Future<void> main() async {
   );
 
   runApp(
-    // --- 2. PASS THE REPOSITORIES TO THE APP WIDGET ---
     SuvaiApp(
       recipeRepository: recipeRepository,
       mealPlanRepository: mealPlanRepository,
@@ -36,7 +33,6 @@ Future<void> main() async {
 }
 
 class SuvaiApp extends StatelessWidget {
-  // --- 3. ADD CONSTRUCTOR AND PROPERTIES FOR THE REPOSITORIES ---
   final RecipeRepository recipeRepository;
   final MealPlanRepository mealPlanRepository;
   final ShoppingListRepository shoppingListRepository;
@@ -50,8 +46,6 @@ class SuvaiApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
-    // --- 4. USE .value CONSTRUCTORS TO PROVIDE THE EXISTING INSTANCES ---
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider.value(value: recipeRepository),
@@ -61,43 +55,73 @@ class SuvaiApp extends StatelessWidget {
       child: MaterialApp.router(
         routerConfig: goRouter,
         title: 'Suvai',
+        themeMode: ThemeMode.system,
+
+        // --- UPDATED LIGHT THEME ---
         theme: ThemeData(
-          // Set the overall brightness to dark
           brightness: Brightness.light,
-          // Use Poppins font for the whole app
-          textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme.apply(bodyColor: Colors.black87)),
-
-          // Define the core color scheme
-          colorScheme: const ColorScheme.light(
-            primary: Colors.orange,
-            secondary: Colors.redAccent,
+          // Corrected Color Scheme
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.orange,
+            brightness: Brightness.light,
+          ).copyWith(
+            primary: Colors.orange.shade700, // Enforce a specific orange shade
           ),
-
-          // Set the main background color
-          scaffoldBackgroundColor: Colors.white,
-
-          // Style for all cards in the app
+          textTheme: GoogleFonts.poppinsTextTheme(ThemeData.light().textTheme),
+          scaffoldBackgroundColor: const Color(0xFFF5F5F5),
           cardTheme: CardThemeData(
-            elevation: 5,
-          //  color: const Color(0xFF1E1E1E),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 2,
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
-
-          // Style for all text input fields
           inputDecorationTheme: InputDecorationTheme(
             filled: true,
-            fillColor: Colors.grey.shade100,
-            hintStyle: TextStyle(color: Colors.grey.shade700),
-            labelStyle: const TextStyle(color: Colors.black54), // For when the label is not focused
-            floatingLabelStyle: const TextStyle(color: Colors.black54), // For when the label is floating
+            fillColor: Colors.white,
+            hintStyle: TextStyle(color: Colors.grey.shade500),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
           ),
-          floatingActionButtonTheme: FloatingActionButtonThemeData(
-           // backgroundColor: Colors.orange.shade600, // Set a base color
-            shape: const CircleBorder(), // Enforce a circular shape globally
+          // Updated to use the new primary color
+          bottomNavigationBarTheme: BottomNavigationBarThemeData(
+            backgroundColor: Colors.white,
+            unselectedItemColor: Colors.grey.shade600,
+          ),
+          useMaterial3: true,
+        ),
+
+        // --- UPDATED DARK THEME ---
+        darkTheme: ThemeData(
+          brightness: Brightness.dark,
+          // Corrected Color Scheme
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.orange,
+            brightness: Brightness.dark,
+          ).copyWith(
+            primary: Colors.orange.shade400, // Enforce a specific orange shade
+          ),
+          textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
+          scaffoldBackgroundColor: const Color(0xFF121212),
+          cardTheme: CardThemeData(
+            elevation: 0,
+            clipBehavior: Clip.antiAlias,
+            color: const Color(0xFF1E1E1E),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: const Color(0xFF1E1E1E),
+            hintStyle: TextStyle(color: Colors.grey.shade700),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+          // Updated to use the new primary color
+          bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+            backgroundColor: Color(0xFF1E1E1E),
+            unselectedItemColor: Colors.grey,
           ),
           useMaterial3: true,
         ),

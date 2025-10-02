@@ -1,5 +1,6 @@
-import 'dart:io';
+// lib/features/recipe_book/views/add_edit_recipe_screen.dart
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -11,7 +12,7 @@ import 'package:suvai/data/models/instruction_model.dart';
 import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
 
-// The Cubit to manage the state of the recipe form
+// (The RecipeFormCubit remains exactly the same)
 class RecipeFormCubit extends Cubit<Recipe> {
   final RecipeRepository _recipeRepository;
 
@@ -40,7 +41,6 @@ class RecipeFormCubit extends Cubit<Recipe> {
     ));
   }
 
-  // --- INGREDIENT METHODS ---
   void addIngredient() {
     final newIngredients = List<Ingredient>.from(state.ingredients)
       ..add(const Ingredient(quantity: 0, unit: 'g', name: ''));
@@ -67,7 +67,6 @@ class RecipeFormCubit extends Cubit<Recipe> {
     emit(state.copyWith(ingredients: newIngredients));
   }
 
-  // --- INSTRUCTION METHODS ---
   void addInstruction() {
     final newInstructions = List<Instruction>.from(state.instructions)
       ..add(const Instruction(description: ''));
@@ -78,7 +77,8 @@ class RecipeFormCubit extends Cubit<Recipe> {
     final newInstructions = List<Instruction>.from(state.instructions);
     newInstructions[index] = Instruction(
         description: text,
-        durationInMinutes: duration ?? newInstructions[index].durationInMinutes);
+        durationInMinutes:
+        duration ?? newInstructions[index].durationInMinutes);
     emit(state.copyWith(instructions: newInstructions));
   }
 
@@ -88,7 +88,6 @@ class RecipeFormCubit extends Cubit<Recipe> {
     emit(state.copyWith(instructions: newInstructions));
   }
 
-  // --- TAGS METHOD ---
   void tagsChanged(String tagsString) {
     final tags = tagsString
         .split(',')
@@ -119,53 +118,53 @@ class RecipeFormCubit extends Cubit<Recipe> {
     final pickedFile = await picker.pickImage(source: source);
 
     if (pickedFile != null) {
-      // Get the app's document directory
       final appDir = await getApplicationDocumentsDirectory();
-      // Generate a unique file name
       final fileName = path.basename(pickedFile.path);
-      // Create a permanent path in the app's directory
       final savedImagePath = path.join(appDir.path, fileName);
-
-      // Copy the picked image file to the permanent path
       final file = File(pickedFile.path);
       await file.copy(savedImagePath);
-
-      // Update the state with the new image path
       emit(state.copyWith(imagePath: savedImagePath));
     }
   }
 }
 
-// --- MAIN SCREEN WIDGET ---
+
+// --- THIS IS THE UPDATED SCREEN WIDGET ---
 class AddEditRecipeScreen extends StatelessWidget {
-  final RecipeRepository recipeRepository;
   final Recipe? recipe;
 
   const AddEditRecipeScreen({
     super.key,
-    required this.recipeRepository,
     this.recipe,
   });
 
   @override
   Widget build(BuildContext context) {
+    // The BlocProvider now wraps the sheet's content directly.
     return BlocProvider(
-      create: (context) => RecipeFormCubit(recipeRepository, recipe),
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(recipe == null ? 'Add New Recipe' : 'Edit Recipe'),
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        ),
-        body: const SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(16, 0, 16, 40),
-          child: _RecipeForm(),
+      create: (context) => RecipeFormCubit(
+        context.read<RecipeRepository>(),
+        recipe,
+      ),
+      child: Padding(
+        padding:
+        EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.9,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return SingleChildScrollView(
+              controller: scrollController,
+              child: const _RecipeForm(),
+            );
+          },
         ),
       ),
     );
   }
 }
 
-// --- FORM WIDGET ---
 class _RecipeForm extends StatelessWidget {
   const _RecipeForm();
 
@@ -173,17 +172,41 @@ class _RecipeForm extends StatelessWidget {
   Widget build(BuildContext context) {
     final cubit = context.watch<RecipeFormCubit>();
     final recipe = cubit.state;
-    final formKey = Key('recipe_form_${recipe.id ?? 'new'}');
+    final isEditing = recipe.id != null;
+    final theme = Theme.of(context);
 
-    return Form(
-      key: formKey,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 16),
+          // Drag Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade400,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          // Title
+          Text(
+            isEditing ? 'Edit Recipe' : 'Add New Recipe',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 24),
+          // --- The rest of the form is the same as before ---
           GestureDetector(
             onTap: () {
-              // Show a dialog to choose between camera and gallery
               showModalBottomSheet(
                 context: context,
                 builder: (builderContext) {
@@ -212,30 +235,30 @@ class _RecipeForm extends StatelessWidget {
                 },
               );
             },
-            child: Container(
-              height: 200,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              // Conditionally display the image or the placeholder
-              child: recipe.imagePath != null && recipe.imagePath!.isNotEmpty
-                  ? ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  File(recipe.imagePath!),
-                  fit: BoxFit.cover,
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-              )
-                  : const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add_a_photo_outlined, size: 40),
-                    SizedBox(height: 8),
-                    Text('Tap to add photo'),
-                  ],
+                child: recipe.imagePath != null && recipe.imagePath!.isNotEmpty
+                    ? ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.file(
+                    File(recipe.imagePath!),
+                    fit: BoxFit.cover,
+                  ),
+                )
+                    : const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_a_photo_outlined, size: 40),
+                      SizedBox(height: 8),
+                      Text('Tap to add photo'),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -292,53 +315,42 @@ class _RecipeForm extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           _buildSectionTitle(context, 'Ingredients'),
-          ..._buildIngredientsInputs(context, recipe.ingredients, cubit, recipe.id),
+          ..._buildIngredientsInputs(
+              context, recipe.ingredients, cubit, recipe.id),
           const SizedBox(height: 8),
           TextButton.icon(
             icon: const Icon(Icons.add),
-            label: const Text('Add more ingredients'),
+            label: const Text('Add Ingredient'),
             onPressed: () => cubit.addIngredient(),
           ),
           const SizedBox(height: 24),
           _buildSectionTitle(context, 'Instructions'),
-          ..._buildInstructionsInputs(context, recipe.instructions, cubit, recipe.id),
+          ..._buildInstructionsInputs(
+              context, recipe.instructions, cubit, recipe.id),
           const SizedBox(height: 8),
           TextButton.icon(
             icon: const Icon(Icons.add),
-            label: const Text('Add new step'),
+            label: const Text('Add Step'),
             onPressed: () => cubit.addInstruction(),
           ),
           const SizedBox(height: 32),
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: LinearGradient(
-                colors: [Colors.orange.shade600, Colors.red.shade400],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24)),
-              ),
-              onPressed: () async {
-                await cubit.saveRecipe();
-                if (context.mounted) {
-                  context.pop();
-                }
-              },
-              child: const Text(
-                'Save Recipe',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+            onPressed: () async {
+              await cubit.saveRecipe();
+              if (context.mounted) {
+                Navigator.of(context).pop(); // Use Navigator.pop for sheets
+              }
+            },
+            child: const Text(
+              'Save Recipe',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -349,12 +361,8 @@ class _RecipeForm extends StatelessWidget {
 
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Text(title,
-          style: Theme.of(context)
-              .textTheme
-              .titleLarge
-              ?.copyWith(color: Colors.black87)),
+      padding: const EdgeInsets.only(top: 8.0, bottom: 12.0),
+      child: Text(title, style: Theme.of(context).textTheme.titleLarge),
     );
   }
 
@@ -362,10 +370,7 @@ class _RecipeForm extends StatelessWidget {
       List<Ingredient> ingredients, RecipeFormCubit cubit, int? recipeId) {
     return List.generate(ingredients.length, (index) {
       final ingredient = ingredients[index];
-      final ingredientKey =
-      Key('ingredient_${recipeId}_${ingredient.id ?? 'new_$index'}');
       return Card(
-        key: ingredientKey,
         margin: const EdgeInsets.only(bottom: 12),
         child: Padding(
           padding: const EdgeInsets.all(12.0),
@@ -425,21 +430,11 @@ class _RecipeForm extends StatelessWidget {
                           cubit.updateIngredient(index, unit: newValue);
                         }
                       },
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.grey.withOpacity(0.1),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline,
-                        color: Colors.redAccent),
+                    icon: Icon(Icons.delete_outline,
+                        color: Theme.of(context).colorScheme.error),
                     onPressed: () => cubit.removeIngredient(index),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -457,9 +452,7 @@ class _RecipeForm extends StatelessWidget {
       List<Instruction> instructions, RecipeFormCubit cubit, int? recipeId) {
     return List.generate(instructions.length, (index) {
       final instruction = instructions[index];
-      final instructionKey = Key('instruction_${recipeId}_$index');
       return Padding(
-        key: instructionKey,
         padding: const EdgeInsets.only(bottom: 8.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,7 +478,8 @@ class _RecipeForm extends StatelessWidget {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              icon: Icon(Icons.delete_outline,
+                  color: Theme.of(context).colorScheme.error),
               onPressed: () => cubit.removeInstruction(index),
             ),
           ],
@@ -495,7 +489,6 @@ class _RecipeForm extends StatelessWidget {
   }
 }
 
-// --- REUSABLE WIDGETS FOR STYLING ---
 class _StyledTextField extends StatelessWidget {
   final String? initialValue;
   final String? hintText;
@@ -524,14 +517,8 @@ class _StyledTextField extends StatelessWidget {
       decoration: InputDecoration(
         hintText: hintText,
         labelText: labelText,
-        filled: true,
-        fillColor: Colors.grey.withOpacity(0.1),
         contentPadding:
         const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
         floatingLabelBehavior: FloatingLabelBehavior.always,
       ),
       keyboardType: keyboardType,
@@ -557,27 +544,40 @@ class _InfoChipInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final backgroundColor = isPrimary ? colorScheme.primary : colorScheme.surfaceVariant;
+    final foregroundColor = isPrimary ? colorScheme.onPrimary : colorScheme.onSurfaceVariant;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color:
-        isPrimary ? Colors.orange.shade800 : Colors.grey.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label,
-              style: const TextStyle(fontSize: 12, color: Colors.black87)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: foregroundColor.withOpacity(0.9),
+            ),
+          ),
           const SizedBox(height: 2),
           TextFormField(
             initialValue: initialValue,
             onChanged: onChanged,
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
-            style:
-            const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.2),
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: foregroundColor,
+            ),
             decoration: const InputDecoration(
+              // These properties make the text field transparent
+              filled: false,
               border: InputBorder.none,
               isDense: true,
               contentPadding: EdgeInsets.zero,

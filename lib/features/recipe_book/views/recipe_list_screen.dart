@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -5,33 +6,30 @@ import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
 import 'package:suvai/features/recipe_book/cubit/recipe_list_cubit.dart';
 import 'package:suvai/features/recipe_book/cubit/recipe_list_state.dart';
-import 'dart:io';
+import 'package:suvai/features/recipe_book/views/add_edit_recipe_screen.dart';
+import 'package:suvai/features/recipe_book/views/recipe_detail_screen.dart';
 
 class RecipeListScreen extends StatelessWidget {
   const RecipeListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // This widget is responsible for CREATING and PROVIDING the Cubit.
     return BlocProvider(
       create: (context) => RecipeListCubit(
         RepositoryProvider.of<RecipeRepository>(context),
       )..loadRecipes(),
-      // Its child is the widget that will build the UI.
       child: const _RecipeListView(),
     );
   }
 }
 
-// This widget's BuildContext is a DESCENDANT of the BlocProvider,
-// so it can successfully find and use the RecipeListCubit.
 class _RecipeListView extends StatelessWidget {
   const _RecipeListView();
 
   @override
   Widget build(BuildContext context) {
-    // Use BlocSelector to rebuild only when the activeTagFilter changes
     final activeTagFilter = context.select((RecipeListCubit cubit) => cubit.state.activeTagFilter);
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: SafeArea(
@@ -40,35 +38,33 @@ class _RecipeListView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               Text(
                 'My Recipes (சுவை)',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               TextField(
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'Search recipes...',
-                  prefixIcon: const Icon(Icons.search),
-
-
-                             ),
+                  prefixIcon: Icon(Icons.search),
+                ),
                 onChanged: (value) {
                   context.read<RecipeListCubit>().searchQueryChanged(value);
                 },
               ),
               if (activeTagFilter != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
+                  padding: const EdgeInsets.only(top: 12.0),
                   child: Chip(
                     label: Text('Filtering by: "$activeTagFilter"'),
-                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                    backgroundColor: theme.colorScheme.primaryContainer,
                     onDeleted: () {
                       context.read<RecipeListCubit>().clearTagFilter();
                     },
                   ),
                 ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               Expanded(
                 child: BlocBuilder<RecipeListCubit, RecipeListState>(
                   builder: (context, state) {
@@ -82,7 +78,7 @@ class _RecipeListView extends StatelessWidget {
                       return const Center(
                         child: Text(
                           'No recipes found.',
-                          style: TextStyle(fontSize: 18, color: Colors.white70),
+                          style: TextStyle(fontSize: 18),
                         ),
                       );
                     }
@@ -90,8 +86,8 @@ class _RecipeListView extends StatelessWidget {
                       padding: const EdgeInsets.only(bottom: 80.0), // Space for FAB
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        crossAxisSpacing: 12.0,
-                        mainAxisSpacing: 12.0,
+                        crossAxisSpacing: 16.0,
+                        mainAxisSpacing: 16.0,
                         childAspectRatio: 0.8,
                       ),
                       itemCount: state.filteredRecipes.length,
@@ -107,27 +103,46 @@ class _RecipeListView extends StatelessWidget {
           ),
         ),
       ),
-      floatingActionButton:
-      Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            colors: [Colors.orange.shade600, Colors.red.shade400],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+        floatingActionButton: Container(
+          width: 56.0, // Standard FAB size
+          height: 56.0,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [Colors.orange.shade600, Colors.red.shade400],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black38,
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: FloatingActionButton(
+            heroTag: 'fab_recipe_list',
+            backgroundColor: Colors.transparent, // Shows the gradient
+            elevation: 0,
+            highlightElevation: 0,
+            shape: const CircleBorder(), // This is the key fix
+            onPressed: () {
+              // --- THIS IS THE NEW BEHAVIOR ---
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true, // IMPORTANT for keyboard
+                backgroundColor: Colors.transparent,
+                builder: (_) => const AddEditRecipeScreen(),
+              ).then((_) {
+                // Refresh the list after the sheet is closed
+                context.read<RecipeListCubit>().loadRecipes();
+              });
+            },
+            child: const Icon(Icons.add, color: Colors.white),
           ),
         ),
-      child: FloatingActionButton(
-        heroTag: 'fab_recipe_list',
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        onPressed: () async {
-          await context.push('/add-recipe');
-          context.read<RecipeListCubit>().loadRecipes();
-        },
-        child: const Icon(Icons.add, size: 32, color: Colors.white),
-      ),
-    ));
+    );
   }
 }
 
@@ -137,41 +152,69 @@ class _RecipeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () async {
-        await context.push('/recipe/${recipe.id}');
-        context.read<RecipeListCubit>().loadRecipes();
-      },
-      onLongPress: () {
-        _showDeleteConfirmation(context, recipe);
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Card(
+      child: InkWell(
+        onTap: () {
+          // --- THIS IS THE NEW onTap BEHAVIOR ---
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true, // Allows the sheet to be almost full screen
+            backgroundColor: Colors.transparent, // Make it transparent to respect child's radius
+            builder: (_) => SizedBox(
+              // Constrain the height to 90% of the screen
+              height: MediaQuery.of(context).size.height * 0.9,
+              child: RecipeDetailScreen(recipeId: recipe.id!),
+            ),
+          );
+        },
+        onLongPress: () {
+          _showDeleteConfirmation(context, recipe);
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          alignment: Alignment.bottomLeft,
           children: [
-            Expanded(
-              child: recipe.imagePath != null && recipe.imagePath!.isNotEmpty
-                  ? Image.file(
-                File(recipe.imagePath!),
-                fit: BoxFit.cover,
+            // Image
+            if (recipe.imagePath != null && recipe.imagePath!.isNotEmpty)
+              Positioned.fill(
+                child: Image.file(
+                  File(recipe.imagePath!),
+                  fit: BoxFit.cover,
+                ),
               )
-                  : Container(
-                color: Colors.grey[800],
-                child: const Center(
-                  child: Icon(Icons.photo_camera, color: Colors.white38, size: 50),
+            else
+              Container(
+                color: Theme.of(context).colorScheme.secondaryContainer,
+                child: Center(
+                  child: Icon(
+                    Icons.image_not_supported_outlined,
+                    color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    size: 50,
+                  ),
+                ),
+              ),
+            // Gradient Overlay
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.center,
                 ),
               ),
             ),
+            // Recipe Name
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(12.0),
               child: Text(
                 recipe.name,
-                textAlign: TextAlign.center,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
               ),
             ),
           ],
@@ -180,6 +223,7 @@ class _RecipeCard extends StatelessWidget {
     );
   }
 }
+
 void _showDeleteConfirmation(BuildContext context, Recipe recipe) {
   showDialog(
     context: context,
@@ -195,7 +239,7 @@ void _showDeleteConfirmation(BuildContext context, Recipe recipe) {
             },
           ),
           TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
             child: const Text('Delete'),
             onPressed: () {
               context.read<RecipeListCubit>().deleteRecipe(recipe.id!);

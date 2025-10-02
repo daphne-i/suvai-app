@@ -59,35 +59,7 @@ final goRouter = GoRouter(
       ],
     ),
     // These routes will cover the bottom nav bar
-    GoRoute(
-      path: '/add-recipe',
-      parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => AddEditRecipeScreen(
-        recipeRepository: RepositoryProvider.of<RecipeRepository>(context),
-        recipe: null,
-      ),
-    ),
-    GoRoute(
-      path: '/recipe/:id',
-      parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) {
-        final id = int.parse(state.pathParameters['id']!);
-        return RecipeDetailScreen(recipeId: id);
-      },
-    ),
 
-    // Edit route is now simpler
-    GoRoute(
-      path: '/edit-recipe',
-      parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) {
-        final recipe = state.extra as Recipe;
-        return AddEditRecipeScreen(
-          recipeRepository: RepositoryProvider.of<RecipeRepository>(context),
-          recipe: recipe,
-        );
-      },
-    ),
     GoRoute(
       path: '/cook',
       parentNavigatorKey: _rootNavigatorKey,
