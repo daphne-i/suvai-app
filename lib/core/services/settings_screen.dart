@@ -5,8 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:suvai/core/services/backup_service.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
 import 'package:suvai/features/recipe_book/cubit/recipe_list_cubit.dart';
+import 'package:suvai/main.dart'; // Import main.dart to access AppColors
 
-// The widget is now renamed to SettingsDrawer to better reflect its purpose
 class SettingsDrawer extends StatefulWidget {
   const SettingsDrawer({super.key});
 
@@ -23,19 +23,26 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
     final backupService = BackupService(context.read<RecipeRepository>());
     final theme = Theme.of(context);
 
-    // The root widget is now a Drawer
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary,
-            ),
-            child: Text(
-              'Suvai Settings',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: theme.colorScheme.onPrimary,
+          // --- UPDATED DRAWERHEADER ---
+          SizedBox( // Use SizedBox to control height
+            height: 120, // Reduced height
+            child: DrawerHeader(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary, // This will be your primaryRed
+              ),
+              child: Align( // Align text to the bottom-left
+                alignment: Alignment.bottomLeft,
+                child: Text(
+                  'Suvai Settings',
+                  style: theme.textTheme.headlineSmall?.copyWith( // Slightly smaller text
+                    color: theme.colorScheme.onPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ),
@@ -51,7 +58,6 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
               setState(() => _isBackingUp = true);
               final success = await backupService.createBackup();
               if (mounted) {
-                // Close the drawer before showing the snackbar
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -62,7 +68,6 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                     success ? Colors.green : Colors.red,
                   ),
                 );
-                // Reset state after a short delay
                 Future.delayed(const Duration(milliseconds: 500), () {
                   if (mounted) setState(() => _isBackingUp = false);
                 });
@@ -99,9 +104,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                 setState(() => _isRestoring = true);
                 final count = await backupService.restoreBackup();
                 if (mounted) {
-                  // Reload the recipe list in the background
                   context.read<RecipeListCubit>().loadRecipes();
-                  // Close the drawer before showing the snackbar
                   Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -112,7 +115,6 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                       count > 0 ? Colors.green : Colors.red,
                     ),
                   );
-                  // Reset state after a short delay
                   Future.delayed(const Duration(milliseconds: 500), () {
                     if (mounted) setState(() => _isRestoring = false);
                   });

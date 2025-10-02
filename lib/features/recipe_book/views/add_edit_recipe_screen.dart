@@ -545,8 +545,8 @@ class _InfoChipInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final backgroundColor = isPrimary ? colorScheme.primary : colorScheme.surfaceVariant;
-    final foregroundColor = isPrimary ? colorScheme.onPrimary : colorScheme.onSurfaceVariant;
+    final backgroundColor = isPrimary ? colorScheme.primary : colorScheme.secondary;
+    final foregroundColor = isPrimary ? colorScheme.onPrimary : colorScheme.onSecondary;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

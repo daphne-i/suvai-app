@@ -53,84 +53,71 @@ class SuvaiApp extends StatelessWidget {
         RepositoryProvider.value(value: mealPlanRepository),
         RepositoryProvider.value(value: shoppingListRepository),
       ],
-        child: BlocProvider<RecipeListCubit>(
-          create: (context) => RecipeListCubit(
-            context.read<RecipeRepository>(),
-          )..loadRecipes(),
-      child: MaterialApp.router(
-        routerConfig: goRouter,
-        title: 'Suvai',
-        themeMode: ThemeMode.system,
+      child: BlocProvider<RecipeListCubit>(
+        create: (context) => RecipeListCubit(
+          context.read<RecipeRepository>(),
+        )..loadRecipes(),
+        child: MaterialApp.router(
+          routerConfig: goRouter,
+          title: 'Suvai',
+          themeMode: ThemeMode.system,
 
-        // --- UPDATED LIGHT THEME ---
-        theme: ThemeData(
-          brightness: Brightness.light,
-          // Corrected Color Scheme
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.orange,
+          // --- NEW LIGHT THEME ---
+          theme: ThemeData(
             brightness: Brightness.light,
-          ).copyWith(
-            primary: Colors.orange.shade700, // Enforce a specific orange shade
-          ),
-          textTheme: GoogleFonts.poppinsTextTheme(ThemeData.light().textTheme),
-          scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-          cardTheme: CardThemeData(
-            elevation: 2,
-            clipBehavior: Clip.antiAlias,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: Colors.white,
-            hintStyle: TextStyle(color: Colors.grey.shade500),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF4A85A4), // Steel Blue
+              brightness: Brightness.light,
+              secondary: const Color(0xFFA4D4D9), // Light Blue
+            ),
+            textTheme: GoogleFonts.poppinsTextTheme(ThemeData.light().textTheme),
+            scaffoldBackgroundColor: const Color(0xFFF0F7F4), // Off-white
+            useMaterial3: true,
+            cardTheme: CardThemeData(
+              elevation: 2,
+              clipBehavior: Clip.antiAlias,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: Colors.white,
+              hintStyle: TextStyle(color: Colors.grey.shade500),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
             ),
           ),
-          // Updated to use the new primary color
-          bottomNavigationBarTheme: BottomNavigationBarThemeData(
-            backgroundColor: Colors.white,
-            unselectedItemColor: Colors.grey.shade600,
-          ),
-          useMaterial3: true,
-        ),
 
-        // --- UPDATED DARK THEME ---
-        darkTheme: ThemeData(
-          brightness: Brightness.dark,
-          // Corrected Color Scheme
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.orange,
+          // --- NEW DARK THEME ---
+          darkTheme: ThemeData(
             brightness: Brightness.dark,
-          ).copyWith(
-            primary: Colors.orange.shade400, // Enforce a specific orange shade
-          ),
-          textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
-          scaffoldBackgroundColor: const Color(0xFF121212),
-          cardTheme: CardThemeData(
-            elevation: 0,
-            clipBehavior: Clip.antiAlias,
-            color: const Color(0xFF1E1E1E),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: const Color(0xFF1E1E1E),
-            hintStyle: TextStyle(color: Colors.grey.shade700),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF4A85A4), // Steel Blue
+              brightness: Brightness.dark,
+              secondary: const Color(0xFFA4D4D9), // Light Blue
+            ),
+            textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
+            scaffoldBackgroundColor: const Color(0xFF1c2128), // Dark Blue-Gray from palette
+            useMaterial3: true,
+            cardTheme: CardThemeData(
+              elevation: 0,
+              clipBehavior: Clip.antiAlias,
+              color: const Color(0xFF2d333b), // Slightly lighter gray
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: const Color(0xFF2d333b),
+              hintStyle: TextStyle(color: Colors.grey.shade600),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
             ),
           ),
-          // Updated to use the new primary color
-          bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-            backgroundColor: Color(0xFF1E1E1E),
-            unselectedItemColor: Colors.grey,
-          ),
-          useMaterial3: true,
         ),
       ),
-    ));
+    );
   }
 }

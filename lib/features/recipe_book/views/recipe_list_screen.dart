@@ -1,18 +1,13 @@
-// lib/features/recipe_book/views/recipe_list_screen.dart
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:suvai/core/services/settings_screen.dart';
 import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/features/recipe_book/cubit/recipe_list_cubit.dart';
 import 'package:suvai/features/recipe_book/cubit/recipe_list_state.dart';
 import 'package:suvai/features/recipe_book/views/add_edit_recipe_screen.dart';
 import 'package:suvai/features/recipe_book/views/recipe_detail_screen.dart';
-
-import '../../../core/services/settings_screen.dart';
-// Import the settings drawer
-
 
 
 class RecipeListScreen extends StatelessWidget {
@@ -29,22 +24,23 @@ class _RecipeListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeTagFilter = context.select((RecipeListCubit cubit) => cubit.state.activeTagFilter);
+    final activeTagFilter =
+    context.select((RecipeListCubit cubit) => cubit.state.activeTagFilter);
     final theme = Theme.of(context);
 
     return Scaffold(
-      // --- ADD THE DRAWER HERE ---
       drawer: const SettingsDrawer(),
       appBar: AppBar(
-        // The default hamburger icon will appear automatically.
-        // You can remove the settings icon from actions if you want.
         title: Text(
           'My Recipes (சுவை)',
-          style: theme.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.bold),
+          style: theme.textTheme.headlineLarge
+              ?.copyWith(fontWeight: FontWeight.bold),
         ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
       body: SafeArea(
-        top: false, // AppBar provides top safety
+        top: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Column(
@@ -79,7 +75,9 @@ class _RecipeListView extends StatelessWidget {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (state.status == RecipeListStatus.failure) {
-                      return Center(child: Text('Failed to load recipes: ${state.errorMessage}'));
+                      return Center(
+                          child: Text(
+                              'Failed to load recipes: ${state.errorMessage}'));
                     }
                     if (state.filteredRecipes.isEmpty) {
                       return const Center(
@@ -90,8 +88,9 @@ class _RecipeListView extends StatelessWidget {
                       );
                     }
                     return GridView.builder(
-                      padding: const EdgeInsets.only(bottom: 80.0),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      padding: const EdgeInsets.only(bottom: 80.0), // Space for FAB
+                      gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         crossAxisSpacing: 16.0,
                         mainAxisSpacing: 16.0,
@@ -115,8 +114,8 @@ class _RecipeListView extends StatelessWidget {
         height: 56.0,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: LinearGradient(
-            colors: [Colors.orange.shade600, Colors.red.shade400],
+          gradient: const LinearGradient(
+            colors: [Color(0xFFEF4747), Color(0xFFD93A3A)], // Vibrant Red -> Darker Red
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -151,7 +150,6 @@ class _RecipeListView extends StatelessWidget {
   }
 }
 
-// ... _RecipeCard and _showDeleteConfirmation remain unchanged ...
 class _RecipeCard extends StatelessWidget {
   const _RecipeCard({required this.recipe});
   final Recipe recipe;
@@ -231,7 +229,8 @@ void _showDeleteConfirmation(BuildContext context, Recipe recipe) {
     builder: (BuildContext dialogContext) {
       return AlertDialog(
         title: const Text('Delete Recipe?'),
-        content: Text('Are you sure you want to delete "${recipe.name}"? This cannot be undone.'),
+        content: Text(
+            'Are you sure you want to delete "${recipe.name}"? This cannot be undone.'),
         actions: <Widget>[
           TextButton(
             child: const Text('Cancel'),
@@ -240,7 +239,8 @@ void _showDeleteConfirmation(BuildContext context, Recipe recipe) {
             },
           ),
           TextButton(
-            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+            style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error),
             child: const Text('Delete'),
             onPressed: () {
               context.read<RecipeListCubit>().deleteRecipe(recipe.id!);
