@@ -27,7 +27,6 @@ class _ShoppingListView extends StatelessWidget {
   // Helper method to show the dialog for adding a manual item
   Future<void> _showAddManualItemDialog(BuildContext context) async {
     final textController = TextEditingController();
-    // This context is now correct (it's a descendant of the BlocProvider)
     final cubit = context.read<ShoppingListCubit>();
 
     await showDialog(
@@ -60,7 +59,6 @@ class _ShoppingListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The entire Scaffold is now inside this widget
     return Scaffold(
       appBar: AppBar(
         title: const Text('Shopping List'),
@@ -81,23 +79,51 @@ class _ShoppingListView extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // This context is also correct now
-          _showAddManualItemDialog(context);
-        },
-        child: const Icon(Icons.add),
+      // --- THIS IS THE CORRECTED FloatingActionButton CODE ---
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            colors: [Colors.orange.shade600, Colors.red.shade400],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: FloatingActionButton(
+          heroTag: 'fab_shopping_list',
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          onPressed: () {
+            _showAddManualItemDialog(context);
+          },
+          child: const Icon(Icons.add, size: 32, color: Colors.white),
+        ),
       ),
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.sync),
-              label: const Text('Generate from Current Week\'s Plan'),
-              onPressed: () {
-                context.read<ShoppingListCubit>().generateList();
-              },
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: LinearGradient(
+                  colors: [Colors.orange.shade600, Colors.red.shade400],
+                ),
+              ),
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.sync, color: Colors.white),
+                label: const Text('Generate from Current Week\'s Plan', style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                ),
+                onPressed: () {
+                  context.read<ShoppingListCubit>().generateList();
+                },
+              ),
             ),
           ),
           Expanded(
@@ -120,27 +146,19 @@ class _ShoppingListView extends StatelessWidget {
                   );
                 }
 
-                // Split items into unchecked and checked for rendering
                 final uncheckedItems = <String, List<ShoppingListItem>>{};
                 final checkedItems = <String, List<ShoppingListItem>>{};
 
                 state.groupedItems.forEach((category, items) {
                   final unchecked = items.where((item) => !item.isChecked).toList();
-                  if (unchecked.isNotEmpty) {
-                    uncheckedItems[category] = unchecked;
-                  }
+                  if (unchecked.isNotEmpty) uncheckedItems[category] = unchecked;
                   final checked = items.where((item) => item.isChecked).toList();
-                  if (checked.isNotEmpty) {
-                    checkedItems[category] = checked;
-                  }
+                  if (checked.isNotEmpty) checkedItems[category] = checked;
                 });
 
                 return ListView(
                   children: [
-                    // Render the list of items to buy
                     _buildCategoryList(context, uncheckedItems),
-
-                    // Render the list of purchased items
                     if (checkedItems.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -161,7 +179,6 @@ class _ShoppingListView extends StatelessWidget {
     );
   }
 
-  // Helper method to render a list of items, grouped by category
   Widget _buildCategoryList(BuildContext context, Map<String, List<ShoppingListItem>> groupedItems, {bool isCheckedList = false}) {
     if (groupedItems.isEmpty && !isCheckedList) {
       return const Padding(
@@ -190,7 +207,6 @@ class _ShoppingListView extends StatelessWidget {
               return CheckboxListTile(
                 controlAffinity: ListTileControlAffinity.leading,
                 title: Text(
-                  // Use a helper to format the quantity nicely
                   '${_formatQuantity(item.quantity)} ${item.unit} ${item.name}',
                   style: TextStyle(
                     decoration: isCheckedList ? TextDecoration.lineThrough : TextDecoration.none,
@@ -199,7 +215,6 @@ class _ShoppingListView extends StatelessWidget {
                 ),
                 value: item.isChecked,
                 onChanged: (bool? value) {
-                  // Connect to the cubit to toggle the item's status
                   context.read<ShoppingListCubit>().toggleItemStatus(item);
                 },
               );
@@ -211,7 +226,6 @@ class _ShoppingListView extends StatelessWidget {
     );
   }
 
-  // Helper to avoid showing .0 for whole numbers
   String _formatQuantity(double quantity) {
     if (quantity == quantity.toInt()) {
       return quantity.toInt().toString();

@@ -95,7 +95,10 @@ class SuvaiApp extends StatelessWidget {
               borderSide: BorderSide.none,
             ),
           ),
-
+          floatingActionButtonTheme: FloatingActionButtonThemeData(
+           // backgroundColor: Colors.orange.shade600, // Set a base color
+            shape: const CircleBorder(), // Enforce a circular shape globally
+          ),
           useMaterial3: true,
         ),
       ),
