@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
@@ -10,21 +9,60 @@ import 'package:suvai/data/models/instruction_model.dart';
 import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
 
-// The Cubit to manage the state of the recipe form
-class RecipeFormCubit extends Cubit<Recipe> {
+// --- STATE CLASS TO HOLD FORM DATA AND SUGGESTIONS ---
+class RecipeFormState {
+  final Recipe recipe;
+  final List<String> tagSuggestions;
+  final List<String> ingredientSuggestions;
+
+  const RecipeFormState({
+    required this.recipe,
+    this.tagSuggestions = const [],
+    this.ingredientSuggestions = const [],
+  });
+
+  RecipeFormState copyWith({
+    Recipe? recipe,
+    List<String>? tagSuggestions,
+    List<String>? ingredientSuggestions,
+  }) {
+    return RecipeFormState(
+      recipe: recipe ?? this.recipe,
+      tagSuggestions: tagSuggestions ?? this.tagSuggestions,
+      ingredientSuggestions:
+      ingredientSuggestions ?? this.ingredientSuggestions,
+    );
+  }
+}
+
+// --- UPDATED CUBIT ---
+class RecipeFormCubit extends Cubit<RecipeFormState> {
   final RecipeRepository _recipeRepository;
 
   RecipeFormCubit(this._recipeRepository, Recipe? initialRecipe)
-      : super(initialRecipe ??
-      const Recipe(
-        name: '',
-        servings: 1,
-        prepTimeMinutes: 15,
-        cookTimeMinutes: 30,
-        ingredients: [Ingredient(quantity: 0, unit: 'g', name: '')],
-        instructions: [Instruction(description: '')],
-        tags: [],
-      ));
+      : super(RecipeFormState(
+    recipe: initialRecipe ??
+        const Recipe(
+          name: '',
+          servings: 1,
+          prepTimeMinutes: 15,
+          cookTimeMinutes: 30,
+          ingredients: [Ingredient(quantity: 0, unit: 'g', name: '')],
+          instructions: [Instruction(description: '')],
+          tags: [],
+        ),
+  )) {
+    _loadSuggestions();
+  }
+
+  Future<void> _loadSuggestions() async {
+    final tags = await _recipeRepository.getAllTags();
+    final ingredients = await _recipeRepository.getAllIngredientNames();
+    emit(state.copyWith(
+      tagSuggestions: tags,
+      ingredientSuggestions: ingredients,
+    ));
+  }
 
   void updateField(
       {String? name,
@@ -32,23 +70,24 @@ class RecipeFormCubit extends Cubit<Recipe> {
         int? prepTimeMinutes,
         int? cookTimeMinutes}) {
     emit(state.copyWith(
-      name: name,
-      servings: servings,
-      prepTimeMinutes: prepTimeMinutes,
-      cookTimeMinutes: cookTimeMinutes,
-    ));
+        recipe: state.recipe.copyWith(
+          name: name,
+          servings: servings,
+          prepTimeMinutes: prepTimeMinutes,
+          cookTimeMinutes: cookTimeMinutes,
+        )));
   }
 
   // --- INGREDIENT METHODS ---
   void addIngredient() {
-    final newIngredients = List<Ingredient>.from(state.ingredients)
+    final newIngredients = List<Ingredient>.from(state.recipe.ingredients)
       ..add(const Ingredient(quantity: 0, unit: 'g', name: ''));
-    emit(state.copyWith(ingredients: newIngredients));
+    emit(state.copyWith(recipe: state.recipe.copyWith(ingredients: newIngredients)));
   }
 
   void updateIngredient(int index,
       {double? quantity, String? unit, String? name, String? prep}) {
-    final newIngredients = List<Ingredient>.from(state.ingredients);
+    final newIngredients = List<Ingredient>.from(state.recipe.ingredients);
     final old = newIngredients[index];
     newIngredients[index] = Ingredient(
         id: old.id,
@@ -57,57 +96,60 @@ class RecipeFormCubit extends Cubit<Recipe> {
         unit: unit ?? old.unit,
         name: name ?? old.name,
         preparation: prep ?? old.preparation);
-    emit(state.copyWith(ingredients: newIngredients));
+    emit(state.copyWith(recipe: state.recipe.copyWith(ingredients: newIngredients)));
   }
 
   void removeIngredient(int index) {
-    final newIngredients = List<Ingredient>.from(state.ingredients)
+    final newIngredients = List<Ingredient>.from(state.recipe.ingredients)
       ..removeAt(index);
-    emit(state.copyWith(ingredients: newIngredients));
+    emit(state.copyWith(recipe: state.recipe.copyWith(ingredients: newIngredients)));
   }
 
   // --- INSTRUCTION METHODS ---
   void addInstruction() {
-    final newInstructions = List<Instruction>.from(state.instructions)
+    final newInstructions = List<Instruction>.from(state.recipe.instructions)
       ..add(const Instruction(description: ''));
-    emit(state.copyWith(instructions: newInstructions));
+    emit(state.copyWith(
+        recipe: state.recipe.copyWith(instructions: newInstructions)));
   }
 
   void updateInstruction(int index, String text, {int? duration}) {
-    final newInstructions = List<Instruction>.from(state.instructions);
+    final newInstructions = List<Instruction>.from(state.recipe.instructions);
     newInstructions[index] = Instruction(
         description: text,
         durationInMinutes:
         duration ?? newInstructions[index].durationInMinutes);
-    emit(state.copyWith(instructions: newInstructions));
+    emit(state.copyWith(
+        recipe: state.recipe.copyWith(instructions: newInstructions)));
   }
 
   void removeInstruction(int index) {
-    final newInstructions = List<Instruction>.from(state.instructions)
+    final newInstructions = List<Instruction>.from(state.recipe.instructions)
       ..removeAt(index);
-    emit(state.copyWith(instructions: newInstructions));
+    emit(state.copyWith(
+        recipe: state.recipe.copyWith(instructions: newInstructions)));
   }
 
-  // --- TAGS METHODS (UPDATED) ---
+  // --- TAGS METHODS ---
   void addTag(String tag) {
-    final newTag = tag.trim().replaceAll(',', ''); // Clean the tag
-    if (newTag.isNotEmpty && !state.tags.contains(newTag)) {
-      final updatedTags = List<String>.from(state.tags)..add(newTag);
-      emit(state.copyWith(tags: updatedTags));
+    final newTag = tag.trim().replaceAll(',', '');
+    if (newTag.isNotEmpty && !state.recipe.tags.contains(newTag)) {
+      final updatedTags = List<String>.from(state.recipe.tags)..add(newTag);
+      emit(state.copyWith(recipe: state.recipe.copyWith(tags: updatedTags)));
     }
   }
 
   void removeTag(String tag) {
-    final updatedTags = List<String>.from(state.tags)..remove(tag);
-    emit(state.copyWith(tags: updatedTags));
+    final updatedTags = List<String>.from(state.recipe.tags)..remove(tag);
+    emit(state.copyWith(recipe: state.recipe.copyWith(tags: updatedTags)));
   }
 
-
   Future<void> saveRecipe() async {
-    final cleanRecipe = state.copyWith(
-      ingredients:
-      state.ingredients.where((i) => i.name.trim().isNotEmpty).toList(),
-      instructions: state.instructions
+    final cleanRecipe = state.recipe.copyWith(
+      ingredients: state.recipe.ingredients
+          .where((i) => i.name.trim().isNotEmpty)
+          .toList(),
+      instructions: state.recipe.instructions
           .where((i) => i.description.trim().isNotEmpty)
           .toList(),
     );
@@ -129,7 +171,7 @@ class RecipeFormCubit extends Cubit<Recipe> {
       final savedImagePath = path.join(appDir.path, fileName);
       final file = File(pickedFile.path);
       await file.copy(savedImagePath);
-      emit(state.copyWith(imagePath: savedImagePath));
+      emit(state.copyWith(recipe: state.recipe.copyWith(imagePath: savedImagePath)));
     }
   }
 }
@@ -157,7 +199,6 @@ class AddEditRecipeScreen extends StatelessWidget {
           maxChildSize: 0.9,
           expand: false,
           builder: (context, scrollController) {
-            // Convert _RecipeForm to StatefulWidget
             return SingleChildScrollView(
               controller: scrollController,
               child: const _RecipeForm(),
@@ -169,7 +210,6 @@ class AddEditRecipeScreen extends StatelessWidget {
   }
 }
 
-// --- CONVERTED TO A STATEFULWIDGET ---
 class _RecipeForm extends StatefulWidget {
   const _RecipeForm();
 
@@ -187,16 +227,11 @@ class _RecipeFormState extends State<_RecipeForm> {
     super.dispose();
   }
 
-  void _submitTag() {
-    context.read<RecipeFormCubit>().addTag(_tagController.text);
-    _tagController.clear();
-  }
-
-
   @override
   Widget build(BuildContext context) {
     final cubit = context.watch<RecipeFormCubit>();
-    final recipe = cubit.state;
+    final recipeState = cubit.state;
+    final recipe = recipeState.recipe;
     final isEditing = recipe.id != null;
     final theme = Theme.of(context);
 
@@ -210,6 +245,7 @@ class _RecipeFormState extends State<_RecipeForm> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // ... (Header and Image picker UI is unchanged)
           Center(
             child: Container(
               width: 40,
@@ -228,7 +264,6 @@ class _RecipeFormState extends State<_RecipeForm> {
                 ?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
-          // ... (Image picker and info chips are unchanged)
           GestureDetector(
             onTap: () {
               showModalBottomSheet(
@@ -332,13 +367,13 @@ class _RecipeFormState extends State<_RecipeForm> {
           ),
           const SizedBox(height: 16),
 
-          // --- NEW TAG INPUT UI ---
-          _buildTagsSection(context, recipe.tags),
+          // --- UPDATED TAGS SECTION ---
+          _buildTagsSection(context, recipe.tags, recipeState.tagSuggestions),
 
           const SizedBox(height: 24),
           _buildSectionTitle(context, 'Ingredients'),
-          ..._buildIngredientsInputs(
-              context, recipe.ingredients, cubit, recipe.id),
+          ..._buildIngredientsInputs(context, recipe.ingredients, cubit,
+              recipe.id, recipeState.ingredientSuggestions),
           const SizedBox(height: 8),
           TextButton.icon(
             icon: const Icon(Icons.add),
@@ -347,8 +382,7 @@ class _RecipeFormState extends State<_RecipeForm> {
           ),
           const SizedBox(height: 24),
           _buildSectionTitle(context, 'Instructions'),
-          ..._buildInstructionsInputs(
-              context, recipe.instructions, cubit, recipe.id),
+          ..._buildInstructionsInputs(context, recipe.instructions, cubit, recipe.id),
           const SizedBox(height: 8),
           TextButton.icon(
             icon: const Icon(Icons.add),
@@ -381,8 +415,9 @@ class _RecipeFormState extends State<_RecipeForm> {
     );
   }
 
-  // --- NEW WIDGET FOR TAGS ---
-  Widget _buildTagsSection(BuildContext context, List<String> tags) {
+  // --- NEW WIDGET FOR TAGS WITH AUTOCOMPLETE ---
+  Widget _buildTagsSection(
+      BuildContext context, List<String> tags, List<String> suggestions) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -400,21 +435,50 @@ class _RecipeFormState extends State<_RecipeForm> {
             }).toList(),
           ),
         const SizedBox(height: 8),
-        TextField(
-          controller: _tagController,
-          decoration: InputDecoration(
-            hintText: 'Add a tag and press enter...',
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: _submitTag,
-            ),
-          ),
-          onSubmitted: (_) => _submitTag(),
+        Autocomplete<String>(
+          optionsBuilder: (TextEditingValue textEditingValue) {
+            if (textEditingValue.text.isEmpty) {
+              return const Iterable<String>.empty();
+            }
+            return suggestions.where((String option) {
+              return option
+                  .toLowerCase()
+                  .contains(textEditingValue.text.toLowerCase());
+            });
+          },
+          onSelected: (String selection) {
+            context.read<RecipeFormCubit>().addTag(selection);
+            // We need to clear the controller in fieldViewBuilder
+          },
+          fieldViewBuilder: (BuildContext context,
+              TextEditingController fieldTextEditingController,
+              FocusNode fieldFocusNode,
+              VoidCallback onFieldSubmitted) {
+            return TextField(
+              controller: fieldTextEditingController,
+              focusNode: fieldFocusNode,
+              decoration: InputDecoration(
+                hintText: 'Add a tag...',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () {
+                    context
+                        .read<RecipeFormCubit>()
+                        .addTag(fieldTextEditingController.text);
+                    fieldTextEditingController.clear();
+                  },
+                ),
+              ),
+              onSubmitted: (String value) {
+                context.read<RecipeFormCubit>().addTag(value);
+                fieldTextEditingController.clear();
+              },
+            );
+          },
         ),
       ],
     );
   }
-
 
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
@@ -423,8 +487,13 @@ class _RecipeFormState extends State<_RecipeForm> {
     );
   }
 
-  List<Widget> _buildIngredientsInputs(BuildContext context,
-      List<Ingredient> ingredients, RecipeFormCubit cubit, int? recipeId) {
+  // --- UPDATED INGREDIENTS INPUTS ---
+  List<Widget> _buildIngredientsInputs(
+      BuildContext context,
+      List<Ingredient> ingredients,
+      RecipeFormCubit cubit,
+      int? recipeId,
+      List<String> suggestions) {
     return List.generate(ingredients.length, (index) {
       final ingredient = ingredients[index];
       return Card(
@@ -437,10 +506,27 @@ class _RecipeFormState extends State<_RecipeForm> {
                 children: [
                   Expanded(
                     flex: 2,
-                    child: _StyledTextField(
-                      hintText: 'Ingredient Name',
-                      initialValue: ingredient.name,
-                      onChanged: (v) => cubit.updateIngredient(index, name: v),
+                    child: Autocomplete<String>(
+                      initialValue: TextEditingValue(text: ingredient.name),
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        if (textEditingValue.text.isEmpty) {
+                          return const Iterable<String>.empty();
+                        }
+                        return suggestions.where((String option) {
+                          return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+                        });
+                      },
+                      onSelected: (String selection) {
+                        cubit.updateIngredient(index, name: selection);
+                      },
+                      fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+                        return _StyledTextField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          hintText: 'Ingredient Name',
+                          onChanged: (v) => cubit.updateIngredient(index, name: v),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -546,10 +632,11 @@ class _RecipeFormState extends State<_RecipeForm> {
   }
 }
 
-// ... (_StyledTextField and _InfoChipInput are unchanged)
-
+// --- UPDATED _StyledTextField TO ACCEPT A CONTROLLER ---
 class _StyledTextField extends StatelessWidget {
   final String? initialValue;
+  final TextEditingController? controller;
+  final FocusNode? focusNode;
   final String? hintText;
   final String? labelText;
   final void Function(String)? onChanged;
@@ -560,6 +647,8 @@ class _StyledTextField extends StatelessWidget {
   const _StyledTextField({
     super.key,
     this.initialValue,
+    this.controller,
+    this.focusNode,
     this.hintText,
     this.labelText,
     this.onChanged,
@@ -572,6 +661,8 @@ class _StyledTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextFormField(
       initialValue: initialValue,
+      controller: controller,
+      focusNode: focusNode,
       style: style,
       decoration: InputDecoration(
         hintText: hintText,
@@ -637,7 +728,6 @@ class _InfoChipInput extends StatelessWidget {
               color: foregroundColor,
             ),
             decoration: const InputDecoration(
-              // These properties make the text field transparent
               filled: false,
               border: InputBorder.none,
               isDense: true,

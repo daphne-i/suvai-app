@@ -175,4 +175,22 @@ class RecipeRepository {
       ingredients: ingredients,
     );
   }
+  Future<List<String>> getAllTags() async {
+    final db = await _dbService.database;
+    final List<Map<String, dynamic>> recipeMaps = await db.query('recipes');
+    final Set<String> allTags = {};
+    for (var recipeMap in recipeMaps) {
+      final tags = List<String>.from(jsonDecode(recipeMap['tags']));
+      allTags.addAll(tags);
+    }
+    return allTags.toList();
+  }
+
+  // ADD THIS METHOD TO GET ALL UNIQUE INGREDIENT NAMES
+  Future<List<String>> getAllIngredientNames() async {
+    final db = await _dbService.database;
+    final List<Map<String, dynamic>> ingredientMaps =
+    await db.query('ingredients', distinct: true, columns: ['name']);
+    return ingredientMaps.map((map) => map['name'] as String).toList();
+  }
 }

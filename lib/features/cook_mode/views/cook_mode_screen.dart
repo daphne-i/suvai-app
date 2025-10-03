@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:suvai/data/models/recipe_model.dart';
 import 'package:suvai/features/cook_mode/cubit/cook_mode_cubit.dart';
 import 'package:suvai/features/cook_mode/cubit/cook_mode_state.dart';
-import 'package:wakelock/wakelock.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 // Enum to manage the different states of the timer.
 enum TimerStatus { initial, running, paused, finished }
@@ -29,7 +29,7 @@ class _CookModeScreenState extends State<CookModeScreen> with TickerProviderStat
   @override
   void initState() {
     super.initState();
-    Wakelock.enable();
+    WakelockPlus.enable();
 
     // 1. Create the cubit here instead of in the provider.
     _cookModeCubit = CookModeCubit(widget.recipe);
@@ -41,7 +41,7 @@ class _CookModeScreenState extends State<CookModeScreen> with TickerProviderStat
 
   @override
   void dispose() {
-    Wakelock.disable();
+    WakelockPlus.disable();
     _cleanupTimerAndController();
     _cookModeCubit.close(); // Dispose the cubit
     super.dispose();

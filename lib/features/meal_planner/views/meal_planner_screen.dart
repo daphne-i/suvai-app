@@ -8,7 +8,7 @@ import 'package:suvai/data/repositories/meal_plan_repository.dart';
 import 'package:suvai/data/repositories/recipe_repository.dart';
 import 'package:suvai/features/meal_planner/cubit/meal_planner_cubit.dart';
 import 'package:suvai/features/meal_planner/cubit/meal_planner_state.dart';
-import 'package:go_router/go_router.dart';
+import 'package:suvai/features/recipe_book/views/recipe_detail_screen.dart'; // Import the detail screen
 
 class MealPlannerScreen extends StatelessWidget {
   const MealPlannerScreen({super.key});
@@ -33,38 +33,6 @@ class MealPlannerScreen extends StatelessWidget {
 class _MealPlannerView extends StatelessWidget {
   const _MealPlannerView();
 
-  Future<void> _showSelectRecipeDialog(BuildContext context, DateTime date, MealType mealType) async {
-    final cubit = context.read<MealPlannerCubit>();
-    final allRecipes = cubit.state.recipeMap.values.toList();
-
-    final selectedRecipe = await showDialog<Recipe>(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Select a Recipe'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: allRecipes.length,
-              itemBuilder: (context, index) {
-                final recipe = allRecipes[index];
-                return ListTile(
-                  title: Text(recipe.name),
-                  onTap: () => Navigator.of(dialogContext).pop(recipe),
-                );
-              },
-            ),
-          ),
-        );
-      },
-    );
-
-    if (selectedRecipe != null && context.mounted) {
-      cubit.addRecipeToPlan(selectedRecipe, date, mealType);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final cubit = context.watch<MealPlannerCubit>();
@@ -86,7 +54,7 @@ class _MealPlannerView extends StatelessWidget {
               ),
               Text(
                 '${DateFormat.MMMMd().format(weekStart)} - ${DateFormat.MMMMd().format(weekEnd)}',
-                style: Theme.of(context).textTheme.titleMedium,
+                style: Theme.of(context).textTheme.titleLarge,
               ),
               IconButton(
                 icon: const Icon(Icons.chevron_right),
@@ -147,7 +115,6 @@ class _MealSlotRow extends StatelessWidget {
     required this.mealType,
   });
 
-  // Helper method from the old layout, now used here
   Future<void> _showSelectRecipeDialog(BuildContext context, DateTime date, MealType mealType) async {
     final cubit = context.read<MealPlannerCubit>();
     final allRecipes = cubit.state.recipeMap.values.toList();
@@ -194,12 +161,20 @@ class _MealSlotRow extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.edit_note),
-                title: const Text('View/Edit Recipe'),
+                leading: const Icon(Icons.visibility_outlined),
+                title: const Text('View Recipe'), // Text changed
                 onTap: () {
                   Navigator.of(dialogContext).pop(); // Close the dialog
-                  // Navigate to the familiar edit screen to view details
-                  context.push('/edit-recipe', extra: recipe);
+                  // *** THIS IS THE MODIFIED PART ***
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.9,
+                      child: RecipeDetailScreen(recipeId: recipe.id!),
+                    ),
+                  );
                 },
               ),
               ListTile(
@@ -234,6 +209,7 @@ class _MealSlotRow extends StatelessWidget {
           (e) => e.date.day == date.day && e.date.month == date.month && e.mealType == mealType,
     );
     final details = mealTypeDetails[mealType]!;
+    final recipeName = entry != null ? state.recipeMap[entry.recipeId]?.name : null;
 
     return InkWell(
       onTap: () {
@@ -263,12 +239,12 @@ class _MealSlotRow extends StatelessWidget {
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: entry != null
+              child: recipeName != null
                   ? Text(
-                state.recipeMap[entry.recipeId]?.name ?? 'Recipe not found',
+                recipeName,
                 style: const TextStyle(fontSize: 16),
               )
-                  : const Icon(Icons.add_circle_outline, color: Colors.white54, size: 28),
+                  : const Icon(Icons.add_circle_outline, color: Colors.grey, size: 28),
             ),
           ],
         ),
